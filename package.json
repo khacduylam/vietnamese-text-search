@@ -5,7 +5,7 @@
   "main": "./lib/search.js",
   "scripts": {
     "test": "NODE_ENV=development nodemon --exec babel-node ./src/test/index.js --ignore ./src/test/",
-    "build": "rimraf ./lib && babel ./src --out-dir ./lib --ignore ./src/test",
+    "build": "rimraf ./lib && babel ./src --out-dir ./lib --ignore ./src/test --copy-files --no-copy-ignored",
     "prepublish": "npm run build"
   },
   "repository": {
