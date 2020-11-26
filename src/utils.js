@@ -1,7 +1,7 @@
 import charmap from './charmap.json';
 const pattern = /[`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/gi;
 const ligatures = ['ch', 'gh', 'gi', 'kh', 'ng', 'ngh', 'nh', 'ph', 'th', 'tr'];
-const scpecialCharacters = [
+const specialCharacters = [
   '/',
   '\\',
   '@',
@@ -44,7 +44,7 @@ export function containsSpecialChars(rawText) {
   return rawText
     .trim()
     .split('')
-    .some((char) => scpecialCharacters.includes(char));
+    .some((char) => specialCharacters.includes(char));
 }
 
 export function slugifyText(rawText, toLower = false) {
@@ -57,7 +57,7 @@ export function slugifyText(rawText, toLower = false) {
     const char = rawText[i];
     if (charmap[char]) {
       text += char;
-    } else if (scpecialCharacters.includes(char)) {
+    } else if (specialCharacters.includes(char)) {
       text += ' ';
     }
   }
