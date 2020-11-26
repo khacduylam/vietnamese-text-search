@@ -176,7 +176,7 @@ export default {
   /**
    * @description Create text indices from many text objects
    * @param {TextObject[]} textObjs
-   * @returns {{TextIndex} Global text index
+   * @returns {Promise<TextIndex>} Global text index
    */
   async createTextIndexByManyTextObjs(textObjs = []) {
     try {
