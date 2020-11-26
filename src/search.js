@@ -7,6 +7,9 @@ import { log } from './utils';
 class TextSearch {
   constructor() {
     this.textIndex = {};
+    this.thresholdScore = configs.DefaultThreshold;
+    this.sortOrder = configs.DefaultSortOrder;
+    this.limit = 0;
   }
   async init(textObjs = [], options = {}, cb) {
     try {
