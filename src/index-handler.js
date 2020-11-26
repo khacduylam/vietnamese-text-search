@@ -105,7 +105,7 @@ export default {
         const textIndexL0Size = Object.keys(textIndexL0).length;
         // nested level 1
         if (textIndexL0[firstKeywordChars]) {
-          const textIndexL1 = textIndex[firstKeywordChars];
+          const textIndexL1 = textIndexL0[firstKeywordChars];
           const textIndexL1Size = Object.keys(textIndexL1).length;
           // nested level 2
           if (textIndexL1[pureKeyword]) {
@@ -143,7 +143,6 @@ export default {
       i += 1;
     }
 
-    log(`removed index of ${textId}`);
     return { removedKeywords: keywords };
   },
 
@@ -153,7 +152,7 @@ export default {
    * @param {TextObject} oldTextObj
    * @param {TextObject} textObj
    * @param {Keyword[]} removedKeywords
-   * @returns {{keywords: Keyword[]}} keywords which are created indices from before
+   * @returns {Promise<{keywords: Keyword[]}>} keywords which are created indices from before
    */
   async updateIndexOfTextObj(textIndex, oldTextObj, textObj) {
     const [
@@ -163,7 +162,7 @@ export default {
     const { diff1: removedKeywords, diff2: newKeywords } = intersect(oldKeywords, keywords);
 
     if (removedKeywords.length) {
-      this.removeIndexOfTextObj(textIndex, textObj, removedKeywords);
+      this.removeIndexOfTextObj(textIndex, oldTextObj, removedKeywords);
     }
 
     if (newKeywords.length) {
@@ -189,7 +188,9 @@ export default {
 
       const globalIndex = keywordObjs.reduce((accObj, { keywords, pureKeywords, ...textObj }) => {
         // sometime input text is not at normal form (e.g. '𝐕𝐄𝐑𝐒𝐀𝐂𝐄 𝐀𝐔𝐓𝐇𝐄𝐍𝐓𝐈𝐂 𝟑𝟒𝐦𝐦')
-        keywords.length && this.createIndexForTextObj(accObj, textObj, keywords);
+        if (textHandler.validateTextObj(textObj) && keywords.length) {
+          this.createIndexForTextObj(accObj, textObj, keywords);
+        }
         return accObj;
       }, {});
 

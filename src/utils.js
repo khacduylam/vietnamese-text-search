@@ -138,10 +138,7 @@ export function getLigatures(rawText) {
 }
 
 export function tokenize(rawText, toLower = false) {
-  if (typeof rawText !== 'string') {
-    throw new Error('argument must be a string');
-  }
-  if (!rawText.trim()) {
+  if (typeof rawText !== 'string' || !rawText.trim()) {
     return [];
   }
 

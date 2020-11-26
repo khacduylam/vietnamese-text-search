@@ -53,5 +53,23 @@ export default {
 
       throw err;
     }
+  },
+
+  /**
+   * @param {TextObject} textObj
+   * @returns {boolean}
+   */
+  validateTextObj(textObj) {
+    if (
+      !textObj ||
+      typeof textObj.textId !== 'string' ||
+      !textObj.textId.trim() ||
+      typeof textObj.text !== 'string' ||
+      !textObj.text.trim()
+    ) {
+      return false;
+    }
+
+    return true;
   }
 };

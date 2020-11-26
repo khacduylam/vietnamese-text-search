@@ -36,3 +36,21 @@
  * @property {Set<string>} l2
  * @property {Set<string>} l3
  */
+
+/**
+ * @typedef SearchOptions
+ * @property {number} thresholdScore
+ * @property {-1|1} sortOrder
+ * @property {number} limit
+ */
+
+/**
+ * @typedef SearchResult
+ * @property {ScoreEntry[]} data
+ * @property {number} thresholdScore
+ * @property {-1|1} sortOrder
+ * @property {number} limit
+ * @property {number} total
+ * @property {number} offset
+ * @property {string} text
+ */

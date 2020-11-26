@@ -4,14 +4,29 @@ import configs from './config';
 import indexHandler from './index-handler';
 import { log } from './utils';
 
+/** @class TextSearch */
 class TextSearch {
   constructor() {
-    this.textIndex = {};
+    /** @private  */
+    this.textIndex_ = {};
+    /** @private  */
+    this.textDict_ = {};
+    /** @public  */
     this.thresholdScore = configs.DefaultThreshold;
+    /** @public  */
     this.sortOrder = configs.DefaultSortOrder;
+    /** @public  */
     this.limit = 0;
   }
-  async init(textObjs = [], options = {}, cb) {
+
+  /**
+   * Initilize an TextSearch instance with options
+   * @param {TextObject} textObjs
+   * @param {SearchOptions} options
+   * @param {Function} cb
+   * @returns {Promise<{nIndices: number}>} { nIndices }
+   */
+  async init(textObjs = [], options = {}, cb = null) {
     try {
       const {
         thresholdScore = configs.DefaultThreshold,
@@ -30,17 +45,13 @@ class TextSearch {
       }
 
       const { textIndex, nIndices } = await indexHandler.createTextIndexByManyTextObjs(textObjs);
-      this.textIndex = textIndex;
-      const result = { nIndices };
-      if (cb) {
-        return cb(null, result);
-      }
+      this.textIndex_ = textIndex;
 
-      this.textDict = {};
+      this.textDict_ = {};
       const textObjsSize = textObjs.length;
       let i = 0;
       while (i < textObjsSize) {
-        this.textDict[textObjs[i].textId] = textObjs[i].text;
+        this.textDict_[textObjs[i].textId] = textObjs[i];
         i += 1;
       }
 
@@ -50,6 +61,10 @@ class TextSearch {
         throw new 'limit muse be greater than or equals 0'();
       }
 
+      const result = { nIndices };
+      if (cb) {
+        return cb(null, result);
+      }
       return result;
     } catch (err) {
       if (cb) {
@@ -58,16 +73,25 @@ class TextSearch {
       throw err;
     }
   }
-  async search(text, options = {}, cb) {
+
+  /**
+   * Search for `text` on the text objects that initialized
+   * @param {string} text
+   * @param {SearchOptions} options
+   * @param {Function} cb
+   * @returns {Promise<SearchResult>} { data, sortOrder, thresholdScore, offset, limit, total, text }
+   */
+  async search(text, options = {}, cb = null) {
     try {
+      const textToSearch = (text + '').trim();
       const {
         sortOrder = this.sortOrder,
         thresholdScore = this.thresholdScore,
         limit = this.limit,
         offset = 0
       } = options;
-      const { keywords } = textHandler.extractKeywordsFromText(text, true);
-      const rawResult = await scoreHandler.getTextScoresWithManyKeywords(this.textIndex, keywords);
+      const { keywords } = textHandler.extractKeywordsFromText(textToSearch, true);
+      const rawResult = await scoreHandler.getTextScoresWithManyKeywords(this.textIndex_, keywords);
 
       const sortFunc = +sortOrder === -1 ? (s1, s2) => -s1[1] + s2[1] : (s1, s2) => s1[1] - s2[1];
       const finalResult = rawResult.filter((s) => s[1] > thresholdScore).sort(sortFunc);
@@ -80,7 +104,7 @@ class TextSearch {
             offset,
             limit,
             total,
-            text
+            text: textToSearch
           })
         : {
             data: finalResult.slice(offset, +limit !== 0 ? +limit : total),
@@ -89,7 +113,7 @@ class TextSearch {
             offset,
             limit,
             total,
-            text
+            text: textToSearch
           };
     } catch (err) {
       log('search error:');
@@ -101,9 +125,20 @@ class TextSearch {
       throw err;
     }
   }
-  async addNewTextObj(textObj, cb) {
+
+  /**
+   * Add a new text object to `this.textDict_`
+   * @param {TextObject} textObj
+   * @param {Function} cb
+   * @returns {Promise<{keywords: Keyword[]}>} cb
+   */
+  async addNewTextObj(textObj, cb = null) {
     try {
-      const { keywords } = indexHandler.createIndexForTextObj(this.textIndex, textObj);
+      if (!textHandler.validateTextObj(textObj)) {
+        throw new Error('invalid textObj');
+      }
+      const { keywords } = indexHandler.createIndexForTextObj(this.textIndex_, textObj);
+      this.textDict_[textObj.textId] = textObj;
 
       if (cb) {
         return cb(null, { nUpserted: 1, keywords });
@@ -119,13 +154,28 @@ class TextSearch {
       throw err;
     }
   }
-  async updateTextObj(oldTextObj, textObj, cb) {
+
+  /**
+   * Update a text object of `this.textDict_`
+   * @param {TextId} textId
+   * @param {TextObject} textObj
+   * @param {Function} cb
+   * @returns {Promise<{newKeywords: Keyword[], removedKeywords: Keyword[]}>} cb
+   */
+  async updateTextObj(textId, textObj, cb = null) {
     try {
+      if (!textHandler.validateTextObj(textObj)) {
+        throw new Error('invalid textObj');
+      }
+      if (!this.textDict_[textId]) {
+        throw new Error('textId not found');
+      }
       const { newKeywords, removedKeywords } = await indexHandler.updateIndexOfTextObj(
-        this.textIndex,
-        oldTextObj,
+        this.textIndex_,
+        this.textDict_[textId],
         textObj
       );
+      this.textDict_[textId] = textObj;
 
       const result = { nUpserted: 1, newKeywords, removedKeywords };
       if (cb) {
@@ -133,7 +183,7 @@ class TextSearch {
       }
       return result;
     } catch (err) {
-      log('addNewTextObj error:');
+      log('updateTextObj error:');
       log(err);
       if (cb) {
         return cb(err);
@@ -142,9 +192,23 @@ class TextSearch {
       throw err;
     }
   }
-  async removeTextObj(textObj, cb) {
+
+  /**
+   * Remove a text object from `this.textDict_`
+   * @param {TextId} textId
+   * @param {Function} cb
+   * @returns {Promise<{removedKeywords: Keyword[]}>} cb
+   */
+  async removeTextObj(textId, cb = null) {
     try {
-      const { removedKeywords } = indexHandler.removeIndexOfTextObj(this.textIndex, textObj);
+      if (!this.textDict_[textId]) {
+        throw new Error('textId not found');
+      }
+      const { removedKeywords } = indexHandler.removeIndexOfTextObj(
+        this.textIndex_,
+        this.textDict_[textId]
+      );
+      delete this.textDict_[textId];
 
       const result = { removedKeywords };
       if (cb) {
