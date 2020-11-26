@@ -1,0 +1,8 @@
+node_modules/
+.env
+.idea
+/logs
+.vscode
+src/test/
+lib/
+babel.config.*

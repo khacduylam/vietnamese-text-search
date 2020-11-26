@@ -1,0 +1,41 @@
+{
+  "name": "vietnamese-text-search",
+  "version": "1.0.0",
+  "description": "Text search for vietnamese.",
+  "main": "./lib/search.js",
+  "scripts": {
+    "test": "NODE_ENV=development nodemon --exec babel-node ./src/test/index.js --ignore ./src/test/",
+    "build": "rimraf ./lib && babel ./src --out-dir ./lib --ignore ./src/test",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khacduylam/vietnamese-text-search"
+  },
+  "keywords": [
+    "full-text",
+    "vietnamese",
+    "search"
+  ],
+  "author": "khacduylam",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khacduylam/vietnamese-text-search/issues"
+  },
+  "homepage": "https://github.com/khacduylam/vietnamese-text-search#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.12.7",
+    "@babel/core": "^7.12.7",
+    "@babel/node": "^7.12.6",
+    "@babel/preset-env": "^7.12.7",
+    "chai": "^4.2.0",
+    "exceljs": "^4.2.0",
+    "execution-time": "^1.4.1",
+    "mocha": "^8.2.1",
+    "nodemon": "^2.0.6",
+    "prettier": "^2.2.0",
+    "rimraf": "^3.0.2",
+    "write-json-file": "^4.3.0"
+  }
+}
