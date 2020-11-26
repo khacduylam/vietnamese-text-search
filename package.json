@@ -1,12 +1,13 @@
 {
   "name": "vietnamese-text-search",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Text search for vietnamese.",
   "main": "./lib/search.js",
   "scripts": {
     "test": "NODE_ENV=development nodemon --exec babel-node ./src/test/index.js --ignore ./src/test/",
     "build": "rimraf ./lib && babel ./src --out-dir ./lib --ignore ./src/test --copy-files --no-copy-ignored",
-    "prepublish": "npm run build"
+    "prepub": "npm run build",
+    "pub": "npm run prepublish && npm publish"
   },
   "repository": {
     "type": "git",
