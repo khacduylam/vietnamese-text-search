@@ -1,6 +1,6 @@
 {
   "name": "vietnamese-text-search",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Text search for vietnamese.",
   "main": "./src/search.js",
   "scripts": {
@@ -25,8 +25,8 @@
   "homepage": "https://github.com/khacduylam/vietnamese-text-search#readme",
   "dependencies": {},
   "devDependencies": {
-    "@babel/cli": "^7.12.7",
-    "@babel/core": "^7.12.7",
+    "@babel/cli": "^7.12.8",
+    "@babel/core": "^7.12.9",
     "@babel/node": "^7.12.6",
     "@babel/preset-env": "^7.12.7",
     "exceljs": "^4.2.0",
