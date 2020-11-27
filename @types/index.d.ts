@@ -64,7 +64,7 @@ declare module 'vietnamese-text-search' {
       cb?: Function
     ): Promise<{ keywords: TextSearch.Keyword[] }>;
 
-    /** Update a text object from instance's text dictionary. */
+    /** Update a text object of instance's text dictionary. */
     public updateTextObj(
       textId: TextSearch.TextId,
       textObj: TextSearch.TextObject,

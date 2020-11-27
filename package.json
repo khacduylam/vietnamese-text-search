@@ -30,6 +30,7 @@
     "@babel/core": "^7.12.9",
     "@babel/node": "^7.12.6",
     "@babel/preset-env": "^7.12.7",
+    "babel-preset-minify": "^0.5.1",
     "exceljs": "^4.2.0",
     "execution-time": "^1.4.1",
     "nodemon": "^2.0.6",

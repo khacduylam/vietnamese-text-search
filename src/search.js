@@ -59,7 +59,7 @@ class TextSearch {
       if (Number.isInteger(+limit) && +limit > -1) {
         instance.limit = +limit;
       } else {
-        throw new 'limit muse be greater than or equals 0'();
+        throw new Error('limit muse be greater than or equals 0');
       }
 
       const result = { nIndices };
