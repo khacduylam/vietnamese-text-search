@@ -1,3 +1,3 @@
 # vietnamese-search
 
-Full-text search on vietnamese text.
+Text search for Vietnamese.

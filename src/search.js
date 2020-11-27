@@ -26,46 +26,47 @@ class TextSearch {
    * @param {Function} cb
    * @returns {Promise<{nIndices: number}>} { nIndices }
    */
-  async init(textObjs = [], options = {}, cb = null) {
+  static async init(textObjs = [], options = {}, cb = null) {
     try {
+      const instance = new TextSearch();
       const {
         thresholdScore = configs.DefaultThreshold,
         sortOrder = configs.DefaultSortOrder,
         limit = 0
       } = options;
       if (!Number.isNaN(+thresholdScore) && thresholdScore >= 0) {
-        this.thresholdScore = thresholdScore;
+        instance.thresholdScore = thresholdScore;
       } else {
         throw new Error('thresholdScore is invalid');
       }
       if ([-1, 1, '-1', '1'].includes(sortOrder)) {
-        this.sortOrder = +sortOrder;
+        instance.sortOrder = +sortOrder;
       } else {
         throw new Error('sortOrder muse be -1 or 1');
       }
 
       const { textIndex, nIndices } = await indexHandler.createTextIndexByManyTextObjs(textObjs);
-      this.textIndex_ = textIndex;
+      instance.textIndex_ = textIndex;
 
-      this.textDict_ = {};
+      instance.textDict_ = {};
       const textObjsSize = textObjs.length;
       let i = 0;
       while (i < textObjsSize) {
-        this.textDict_[textObjs[i].textId] = textObjs[i];
+        instance.textDict_[textObjs[i].textId] = textObjs[i];
         i += 1;
       }
 
       if (Number.isInteger(+limit) && +limit > -1) {
-        this.limit = +limit;
+        instance.limit = +limit;
       } else {
         throw new 'limit muse be greater than or equals 0'();
       }
 
       const result = { nIndices };
       if (cb) {
-        return cb(null, result);
+        return cb(null, instance, result);
       }
-      return result;
+      return instance;
     } catch (err) {
       if (cb) {
         return cb(err);

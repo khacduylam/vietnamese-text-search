@@ -1,8 +1,9 @@
 {
   "name": "vietnamese-text-search",
-  "version": "1.0.11",
+  "version": "1.0.13",
   "description": "Text search for vietnamese.",
-  "main": "./lib/index.js",
+  "main": "./index.js",
+  "types": "./@types/index.d.ts",
   "scripts": {
     "test": "NODE_ENV=development nodemon --exec babel-node ./src/test/index.js --ignore ./src/test/",
     "test-win": "set NODE_ENV=development && nodemon --exec babel-node ./src/test/index.js --ignore ./src/test/",
