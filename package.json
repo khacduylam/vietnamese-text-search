@@ -1,6 +1,6 @@
 {
   "name": "vietnamese-text-search",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Text search for vietnamese.",
   "main": "./index.js",
   "types": "./@types/index.d.ts",

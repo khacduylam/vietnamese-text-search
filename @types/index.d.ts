@@ -49,7 +49,7 @@ declare module 'vietnamese-text-search' {
       textObjs: TextSearch.TextObject[],
       options: TextSearch.SearchOptions,
       cb?: Function
-    ): Promise<{ nIndices: number }>;
+    ): Promise<TextSearch>;
 
     /** Search for text from instance's text dicionary. */
     public search(
