@@ -32,7 +32,8 @@ class TextSearch {
       const {
         thresholdScore = configs.DefaultThreshold,
         sortOrder = configs.DefaultSortOrder,
-        limit = 0
+        limit = 0,
+        offset = 0
       } = options;
       if (!Number.isNaN(+thresholdScore) && thresholdScore >= 0) {
         instance.thresholdScore = thresholdScore;
@@ -42,7 +43,7 @@ class TextSearch {
       if ([-1, 1, '-1', '1'].includes(sortOrder)) {
         instance.sortOrder = +sortOrder;
       } else {
-        throw new Error('sortOrder muse be -1 or 1');
+        throw new Error('sortOrder must be -1 or 1');
       }
 
       const { textIndex, nIndices } = await indexHandler.createTextIndexByManyTextObjs(textObjs);
@@ -59,7 +60,13 @@ class TextSearch {
       if (Number.isInteger(+limit) && +limit > -1) {
         instance.limit = +limit;
       } else {
-        throw new Error('limit muse be greater than or equals 0');
+        throw new Error('limit must be greater than or equals 0');
+      }
+
+      if (Number.isInteger(+offset) && +offset > -1) {
+        instance.offset = +offset;
+      } else {
+        throw new Error('offset must be greater than or equals 0');
       }
 
       const result = { nIndices };
@@ -89,7 +96,7 @@ class TextSearch {
         sortOrder = this.sortOrder,
         thresholdScore = this.thresholdScore,
         limit = this.limit,
-        offset = 0
+        offset = this.offset
       } = options;
       const { keywords } = textHandler.extractKeywordsFromText(textToSearch, true);
       const rawResult = await scoreHandler.getTextScoresWithManyKeywords(this.textIndex_, keywords);
@@ -98,8 +105,10 @@ class TextSearch {
       const finalResult = rawResult.filter((s) => s[1] > thresholdScore).sort(sortFunc);
       const total = finalResult.length;
 
+      const startResults = +offset;
+      const endResults = +limit !== 0 ? +offset + +limit : total;
       return cb
-        ? cb(null, finalResult.slice(offset, +limit !== 0 ? +limit : total), {
+        ? cb(null, finalResult.slice(startResults, endResults), {
             sortOrder,
             thresholdScore,
             offset,
@@ -108,7 +117,7 @@ class TextSearch {
             text: textToSearch
           })
         : {
-            data: finalResult.slice(offset, +limit !== 0 ? +limit : total),
+            data: finalResult.slice(startResults, endResults),
             sortOrder,
             thresholdScore,
             offset,
