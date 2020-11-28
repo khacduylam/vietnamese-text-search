@@ -28,6 +28,7 @@ const TextSearch = require('vietnamese-text-search');
     limit: 10,
     sortOrder: -1
   };
+  // Initialize textSearch instance with `TextObjs` may take some seconds.
   const textSearch = await TextSearch.init(TextObjs, options);
   ...
 })
@@ -68,7 +69,7 @@ console.log(addResult);
 
 ```javascript
 // ...
-const searchResult = await textSearch.search('mặt nạ Aqua');
+const searchResult = await textSearch.search('mặt nạ Aqua', { limit: 10, thresholdScore: 0.5 });
 console.log(searchResult);
 
 // {
@@ -127,5 +128,6 @@ console.log(removeResult);
 1. `sortOrder` (-1: descending | 1: ascending) - The order of search results (_default: -1_).
 1. `thresholdScore`(number) - "Threshold" of score to return results (_default: 0.5_).
 
-> **_Note:_** > `TextObject` has format _{textId: string, text: string}_
+> **_Note:_** 
+> `TextObject` has format _{textId: string, text: string}_
 
