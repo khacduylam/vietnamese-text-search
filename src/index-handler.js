@@ -18,7 +18,7 @@ export default {
       const {
         keywords: _keywords,
         pureKeywords: _pureKeywords
-      } = textHandler.extractKeywordsFromText(text);
+      } = textHandler.extractKeywordsFromText(text, true);
       keywords = _keywords;
       pureKeywords = _pureKeywords;
     }
@@ -87,7 +87,7 @@ export default {
       const {
         keywords: _keywords,
         pureKeywords: _pureKeywords
-      } = textHandler.extractKeywordsFromText(text);
+      } = textHandler.extractKeywordsFromText(text, true);
       keywords = _keywords;
       pureKeywords = _pureKeywords;
     }
