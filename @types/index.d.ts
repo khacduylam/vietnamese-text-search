@@ -62,20 +62,36 @@ declare module 'vietnamese-text-search' {
     public addNewTextObj(
       textObj: TextSearch.TextObject,
       cb?: Function
-    ): Promise<{ keywords: TextSearch.Keyword[] }>;
+    ): Promise<{ nUpserted: number; keywords: TextSearch.Keyword[] }>;
+
+    /** Add many new text objects to instance's text dictionary. */
+    public addManyNewTextObjs(
+      textObjs: TextSearch.TextObject[],
+      cb?: Function
+    ): Promise<{ nUpserted: number }>;
 
     /** Update a text object of instance's text dictionary. */
     public updateTextObj(
       textId: TextSearch.TextId,
       textObj: TextSearch.TextObject,
       cb?: Function
-    ): Promise<{ newKeywords: TextSearch.Keyword[]; removedKeywords: TextSearch.Keyword[] }>;
+    ): Promise<{
+      nUpserted: number;
+      newKeywords: TextSearch.Keyword[];
+      removedKeywords: TextSearch.Keyword[];
+    }>;
 
     /** Remove a text object from instance's text dictionary. */
     public removeTextObj(
       textId: TextSearch.TextId,
       cb?: Function
-    ): Promise<{ removedKeywords: TextSearch.Keyword[] }>;
+    ): Promise<{ nRemoved: number; removedKeywords: TextSearch.Keyword[] }>;
+
+    /** Remove many text objects from instance's text dictionary. */
+    public removeManyTextObjs(
+      textIds: TextSearch.TextId[],
+      cb?: Function
+    ): Promise<{ nRemoved: number }>;
   }
   export = TextSearch;
 }

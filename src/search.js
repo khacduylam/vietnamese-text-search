@@ -16,7 +16,7 @@ class TextSearch {
     /** @public  */
     this.sortOrder = configs.DefaultSortOrder;
     /** @public  */
-    this.limit = 0;
+    this.limit = configs.DefaultLimit;
   }
 
   /**
@@ -28,11 +28,14 @@ class TextSearch {
    */
   static async init(textObjs = [], options = {}, cb = null) {
     try {
+      if (!Array.isArray(textObjs)) {
+        throw new Error('textObjs must be array');
+      }
       const instance = new TextSearch();
       const {
         thresholdScore = configs.DefaultThreshold,
         sortOrder = configs.DefaultSortOrder,
-        limit = 0,
+        limit = configs.DefaultLimit,
         offset = 0
       } = options;
       if (!Number.isNaN(+thresholdScore) && thresholdScore >= 0) {
@@ -140,7 +143,7 @@ class TextSearch {
    * Add a new text object to `this.textDict_`
    * @param {TextObject} textObj
    * @param {Function} cb
-   * @returns {Promise<{keywords: Keyword[]}>} cb
+   * @returns {Promise<{ nUpserted: number, keywords: Keyword[]}>} cb
    */
   async addNewTextObj(textObj, cb = null) {
     try {
@@ -153,9 +156,38 @@ class TextSearch {
       if (cb) {
         return cb(null, { nUpserted: 1, keywords });
       }
-      return { nUpserted: 1 };
+      return { nUpserted: 1, keywords };
     } catch (err) {
       log('addNewTextObj error:');
+      log(err);
+      if (cb) {
+        return cb(err);
+      }
+
+      throw err;
+    }
+  }
+
+  /**
+   * Add many new text objects to `this.textDict_`
+   * @param {TextObject} textObj
+   * @param {Function} cb
+   * @returns {Promise<{nUpserted: number}>} cb
+   */
+  async addManyNewTextObjs(textObjs, cb = null) {
+    try {
+      await indexHandler.createTextIndexByManyTextObjs(textObjs, this.textIndex_);
+      textObjs.reduce((accObj, curObj) => {
+        accObj[curObj.textId] = curObj;
+        return accObj;
+      }, this.textDict_);
+
+      if (cb) {
+        return cb(null, { nUpserted: textObjs.length });
+      }
+      return { nUpserted: textObjs.length };
+    } catch (err) {
+      log('addManyNewTextObjs error:');
       log(err);
       if (cb) {
         return cb(err);
@@ -170,7 +202,7 @@ class TextSearch {
    * @param {TextId} textId
    * @param {TextObject} textObj
    * @param {Function} cb
-   * @returns {Promise<{newKeywords: Keyword[], removedKeywords: Keyword[]}>} cb
+   * @returns {Promise<{ nUpserted: number, newKeywords: Keyword[], removedKeywords: Keyword[]}>} cb
    */
   async updateTextObj(textId, textObj, cb = null) {
     try {
@@ -207,7 +239,7 @@ class TextSearch {
    * Remove a text object from `this.textDict_`
    * @param {TextId} textId
    * @param {Function} cb
-   * @returns {Promise<{removedKeywords: Keyword[]}>} cb
+   * @returns {Promise<{ nRemoved: number, removedKeywords: Keyword[]}>} cb
    */
   async removeTextObj(textId, cb = null) {
     try {
@@ -220,13 +252,61 @@ class TextSearch {
       );
       delete this.textDict_[textId];
 
-      const result = { removedKeywords };
+      const result = { nRemoved: 1, removedKeywords };
       if (cb) {
         return cb(null, result);
       }
       return result;
     } catch (err) {
       log('removeTextObj error:');
+      log(err);
+      if (cb) {
+        return cb(err);
+      }
+
+      throw err;
+    }
+  }
+
+  /**
+   * Remove many text objects from `this.textDict_`,
+   * leave textIds = [] for removing all text indices
+   * @param {TextId[]} textIds
+   * @param {Function} cb
+   * @returns {Promise<{nRemoved: number}>} cb
+   */
+  async removeManyTextObjs(textIds, cb = null) {
+    try {
+      const self = this;
+      if (!Array.isArray(textIds)) {
+        throw new Error('textIds must be array');
+      }
+      let nRemoved = 0;
+      if (!textIds.length) {
+        nRemoved = Object.keys(self.textDict_);
+        this.textIndex_ = {};
+        this.textDict_ = {};
+      } else {
+        const removedTextIds = [...new Set(textIds)];
+        nRemoved = removedTextIds.reduce((acc, cur) => {
+          if (!self.textDict_[cur]) {
+            throw new Error('textId not found');
+          }
+          indexHandler.removeIndexOfTextObj(self.textIndex_, self.textDict_[cur]);
+          delete self.textDict_[cur];
+
+          acc += 1;
+          return acc;
+        }, 0);
+      }
+
+      const result = { nRemoved };
+      if (cb) {
+        return cb(null, result);
+      }
+      return result;
+    } catch (err) {
+      log('removeManyTextObjs error:');
       log(err);
       if (cb) {
         return cb(err);

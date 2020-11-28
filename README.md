@@ -114,12 +114,14 @@ console.log(removeResult);
 
 ## APIs
 
-| API                             | Description                                                                   |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| .addNewTextObj(newTextObj)      | Add a new `TextObject` to `TextSearch` instance's dictionary                  |
-| .updateTextObj(textId, textObj) | Update field `text` of a `TextObject` from `TextSearch` instance's dictionary |
-| .removeTextObj(textId)          | Remove a `TextObject` from `TextSearch` instance's dictionary                 |
-| .search(text, options)          | Search for `text` from `TextSearch` instance's dictionary                     |
+| API                              | Description                                                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| .addNewTextObj(newTextObj)       | Add a new `TextObject` to `TextSearch` instance's dictionary _(TextObject's format: { textId: string, text: string })_ |
+| .addManyNewTextObjs(newTextObjs) | Add many new `TextObject` to `TextSearch` instance's dictionary                                                        |
+| .updateTextObj(textId, textObj)  | Update field `text` of a `TextObject` from `TextSearch` instance's dictionary                                          |
+| .removeTextObj(textId)           | Remove a `TextObject` from `TextSearch` instance's dictionary                                                          |
+| .removeManyTextObjs(textIds)     | Remove many `TextObject` from `TextSearch` instance's dictionary _(remove all when textIds is [])_                     |
+| .search(text, options)           | Search for `text` from `TextSearch` instance's dictionary                                                              |
 
 ## Search Options
 
@@ -127,7 +129,3 @@ console.log(removeResult);
 1. `offset`(number) - Used with limit for page pagination (_default: 0_).
 1. `sortOrder` (-1: descending | 1: ascending) - The order of search results (_default: -1_).
 1. `thresholdScore`(number) - "Threshold" of score to return results (_default: 0.5_).
-
-> **_Note:_** 
-> `TextObject` has format _{textId: string, text: string}_
-

@@ -173,11 +173,13 @@ export default {
   },
 
   /**
-   * @description Create text indices from many text objects
+   * Create text indices from many text objects, if the second argument is passed to the function,
+   * then using this as global textIndex for indexing new text objects.
    * @param {TextObject[]} textObjs
+   * @param {TextIndex} textIndex
    * @returns {Promise<TextIndex>} Global text index
    */
-  async createTextIndexByManyTextObjs(textObjs = []) {
+  async createTextIndexByManyTextObjs(textObjs = [], textIndex = null) {
     try {
       const length = textObjs.length;
       log(`[${new Date()}]: Start indexing for ${length} objects...`);
@@ -192,7 +194,7 @@ export default {
           this.createIndexForTextObj(accObj, textObj, keywords);
         }
         return accObj;
-      }, {});
+      }, textIndex || {});
 
       log(`[${new Date()}]: Finish indexing for ${length} objects`);
 
