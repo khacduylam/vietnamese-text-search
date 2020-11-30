@@ -4,7 +4,7 @@ import configs from './config';
 export default {
   /**
    * @param {ScoreObject[]} scoreObjs
-   * @returns {ScoreObject} { textId1: score1, textId2: score2, ... }
+   * @returns {ScoreObject} { textKey1: score1, textKey2: score2, ... }
    */
   mergeScoreObjs(scoreObjs) {
     return scoreObjs.reduce((finalObj, curObj) => {
@@ -50,12 +50,12 @@ export default {
   /**
    * @param {TextIndex} textIndex
    * @param {Keyword} keyword
-   * @param {Text4lsObject} textIdsObj
-   * @returns {ScoreObject} { textId1: score1, textId2: score2, ... }
+   * @param {Text4lsObject} textKeysObj
+   * @returns {ScoreObject} { textKey1: score1, textKey2: score2, ... }
    */
-  getTextScoresWithKeyword(textIndex, keyword, textIdsObj = {}) {
-    let { l0, l1, l2, l3 } = textIdsObj;
-    if (!textIdsObj || Object.keys(textIdsObj).length !== 4) {
+  getTextScoresWithKeyword(textIndex, keyword, textKeysObj = {}) {
+    let { l0, l1, l2, l3 } = textKeysObj;
+    if (!textKeysObj || Object.keys(textKeysObj).length !== 4) {
       let { l0: _l0, l1: _l1, l2: _l2, l3: _l3 } = this.getAll4LsTextIds(textIndex, keyword);
       l0 = _l0;
       l1 = _l1;
@@ -81,7 +81,7 @@ export default {
   /**
    * @param {TextIndex} textIndex
    * @param {Keyword[]} keywords
-   * @returns {Promise<ScoreEntry[]>} [ [textId1, score1], [textId2, score2], ... ]
+   * @returns {Promise<ScoreEntry[]>} [ [textKey1, score1], [textKey2, score2], ... ]
    */
   async getTextScoresWithManyKeywords(textIndex, keywords) {
     const textScoreObjs = await Promise.all(

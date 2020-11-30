@@ -1,4 +1,5 @@
-import { removeAccents, intersect, getLigatures, log } from './utils';
+import { removeAccents, validateTextObj, intersect, getLigatures, log } from './utils';
+import configs from './config';
 import textHandler from './text-handler';
 
 export default {
@@ -6,19 +7,33 @@ export default {
    * @description Create new text indices from a single text object
    * @param {TextIndex} textIndex
    * @param {TextObject} textObj
-   * @param {Keyword[]} newKeywords
+   * @param {CreateIndexOptions} options
    * @returns {{keywords: Keyword[]}} new keywords which are created indices for
    */
-  createIndexForTextObj(textIndex = {}, textObj, newKeywords = []) {
-    const { textId, text } = textObj;
+  createIndexForTextObj(
+    textIndex = {},
+    textObj,
+    {
+      textKeyName = configs.DefaultKeyName,
+      textValueName = configs.DefaultValueName,
+      keywords: newKeywords = []
+    }
+  ) {
+    const valResult = validateTextObj(textObj, { textKeyName, textValueName });
+    if (!valResult.valid) {
+      throw new Error(valResult.message);
+    }
+
+    const textKey = valResult.data[textKeyName];
+    const textValue = valResult.data[textValueName];
 
     let keywords = newKeywords;
     let pureKeywords = keywords.map((kw) => removeAccents(kw));
-    if (!newKeywords.length) {
+    if (!keywords.length) {
       const {
         keywords: _keywords,
         pureKeywords: _pureKeywords
-      } = textHandler.extractKeywordsFromText(text, true);
+      } = textHandler.extractKeywordsFromText(textValue, true);
       keywords = _keywords;
       pureKeywords = _pureKeywords;
     }
@@ -41,26 +56,28 @@ export default {
             const textIndexL2 = textIndexL1[pureKeyword];
             // nested level 3
             if (textIndexL2[keyword]) {
-              textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword].add(textId);
+              textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword].add(
+                textKey
+              );
             } else {
               textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword] = new Set([
-                textId
+                textKey
               ]);
             }
           } else {
             textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword] = {
-              [keyword]: new Set([textId])
+              [keyword]: new Set([textKey])
             };
           }
         } else {
           textIndex[firstPureKeywordChars][firstKeywordChars] = {
-            [pureKeyword]: { [keyword]: new Set([textId]) }
+            [pureKeyword]: { [keyword]: new Set([textKey]) }
           };
         }
       } else {
         textIndex[firstPureKeywordChars] = {
           [firstKeywordChars]: {
-            [pureKeyword]: { [keyword]: new Set([textId]) }
+            [pureKeyword]: { [keyword]: new Set([textKey]) }
           }
         };
       }
@@ -75,19 +92,33 @@ export default {
    * @description Remove created text indices of a single text object
    * @param {TextIndex} textIndex
    * @param {TextObject} textObj
-   * @param {Keyword[]} removedKeywords
+   * @param {RemoveIndexOptions} options
    * @returns {{keywords: Keyword[]}} keywords which are created indices from before
    */
-  removeIndexOfTextObj(textIndex, textObj, removedKeywords = []) {
-    const { textId, text } = textObj;
+  removeIndexOfTextObj(
+    textIndex,
+    textObj,
+    {
+      textKeyName = configs.DefaultKeyName,
+      textValueName = configs.DefaultValueName,
+      keywords: removedKeywords = []
+    }
+  ) {
+    const valResult = validateTextObj(textObj, { textKeyName, textValueName });
+    if (!valResult.valid) {
+      throw new Error(valResult.message);
+    }
+
+    const textKey = valResult.data[textKeyName];
+    const textValue = valResult.data[textValueName];
 
     let keywords = removedKeywords;
     let pureKeywords = keywords.map((kw) => removeAccents(kw));
-    if (!removedKeywords.length) {
+    if (!keywords.length) {
       const {
         keywords: _keywords,
         pureKeywords: _pureKeywords
-      } = textHandler.extractKeywordsFromText(text, true);
+      } = textHandler.extractKeywordsFromText(textValue, true);
       keywords = _keywords;
       pureKeywords = _pureKeywords;
     }
@@ -115,10 +146,10 @@ export default {
             if (textIndexL2[keyword]) {
               const textIndexL3 = textIndexL2[keyword];
               const textIndexL3Size = Object.keys(textIndexL3).length;
-              // delete textId out of index L3 (if exists)
-              if (textIndexL3.has(textId)) {
+              // delete textKey out of index L3 (if exists)
+              if (textIndexL3.has(textKey)) {
                 textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword].delete(
-                  textId
+                  textKey
                 );
 
                 // delete index level3 if empty
@@ -151,22 +182,46 @@ export default {
    * @param {TextIndex} textIndex
    * @param {TextObject} oldTextObj
    * @param {TextObject} textObj
-   * @param {Keyword[]} removedKeywords
-   * @returns {Promise<{keywords: Keyword[]}>} keywords which are created indices from before
+   * @param {UpdateIndexOptions} options
+   * @returns {Promise<{newKeywords: Keyword[], removedKeywords: Keyword[]}>}
    */
-  async updateIndexOfTextObj(textIndex, oldTextObj, textObj) {
-    const [
-      { keywords: oldKeywords },
-      { keywords }
-    ] = await textHandler.extractKeywordsFromManyTexts([oldTextObj.text, textObj.text]);
+  async updateIndexOfTextObj(
+    textIndex,
+    oldTextObj,
+    textObj,
+    {
+      textKeyName = configs.DefaultKeyName,
+      textValueName = configs.DefaultValueName,
+      keywords: _keywords = [],
+      oldKeywords: _oldKeywords = []
+    }
+  ) {
+    let keywords = _keywords;
+    let oldKeywords = _oldKeywords;
+    if (!keywords.length) {
+      const { keywords: keywordsFromTextObj } = textHandler.extractKeywordsFromText(
+        textObj[textValueName]
+      );
+      keywords = keywordsFromTextObj;
+    }
+    if (!oldKeywords.length) {
+      const { keywords: keywordsFromOldTextObj } = textHandler.extractKeywordsFromText(
+        oldTextObj[textValueName]
+      );
+      oldKeywords = keywordsFromOldTextObj;
+    }
     const { diff1: removedKeywords, diff2: newKeywords } = intersect(oldKeywords, keywords);
 
+    const baseOptions = { textKeyName, textValueName };
     if (removedKeywords.length) {
-      this.removeIndexOfTextObj(textIndex, oldTextObj, removedKeywords);
+      this.removeIndexOfTextObj(textIndex, oldTextObj, {
+        ...baseOptions,
+        keywords: removedKeywords
+      });
     }
 
     if (newKeywords.length) {
-      this.createIndexForTextObj(textIndex, textObj, newKeywords);
+      this.createIndexForTextObj(textIndex, textObj, { ...baseOptions, keywords: newKeywords });
     }
 
     return { newKeywords, removedKeywords };
@@ -174,31 +229,54 @@ export default {
 
   /**
    * Create text indices from many text objects, if the second argument is passed to the function,
-   * then using this as global textIndex for indexing new text objects.
+   * then using this argument as global textIndex for indexing new text objects.
    * @param {TextObject[]} textObjs
    * @param {TextIndex} textIndex
-   * @returns {Promise<TextIndex>} Global text index
+   * @param {CreateIndexOptions} options
+   * @returns {Promise<{textIndex: TextIndex, nIndices: number, nCreated: number, errors: TextKey[]}>} Global text index
    */
-  async createTextIndexByManyTextObjs(textObjs = [], textIndex = null) {
+  async createTextIndexByManyTextObjs(
+    textObjs = [],
+    textIndex = null,
+    { textKeyName = configs.DefaultKeyName, textValueName = configs.DefaultValueName }
+  ) {
     try {
       const length = textObjs.length;
       log(`[${new Date()}]: Start indexing for ${length} objects...`);
 
       log(`[${new Date()}]: Extracting keywords from text objects...`);
-      // ouput: [{ keywords: [], pureKeywords: [], textId, text },...]
-      const keywordObjs = await textHandler.extractKeywordsFromManyTextObjs(textObjs, true);
+      // ouput: [{ keywords: [], pureKeywords: [], textKey, textValue },...]
+      const keywordObjs = await textHandler.extractKeywordsFromManyTextObjs(textObjs, {
+        toLower: true,
+        textKeyName,
+        textValueName
+      });
 
+      let nCreated = 0;
+      const errors = [];
       const globalIndex = keywordObjs.reduce((accObj, { keywords, pureKeywords, ...textObj }) => {
         // sometime input text is not at normal form (e.g. '𝐕𝐄𝐑𝐒𝐀𝐂𝐄 𝐀𝐔𝐓𝐇𝐄𝐍𝐓𝐈𝐂 𝟑𝟒𝐦𝐦')
-        if (textHandler.validateTextObj(textObj) && keywords.length) {
-          this.createIndexForTextObj(accObj, textObj, keywords);
+        if (keywords.length) {
+          this.createIndexForTextObj(accObj, textObj, {
+            keywords,
+            textKeyName,
+            textValueName
+          });
+          nCreated += 1;
+        } else {
+          errors.push(textObj[textKeyName]);
         }
         return accObj;
       }, textIndex || {});
 
-      log(`[${new Date()}]: Finish indexing for ${length} objects`);
-
-      return { textIndex: globalIndex, nIndices: Object.keys(globalIndex).length };
+      log(`[${new Date()}]: Finish indexing for ${nCreated} objects | Error objects: ${errors}`);
+      log(`[${new Date()}]: ${errors}`);
+      return {
+        textIndex: globalIndex,
+        nIndices: Object.keys(globalIndex).length,
+        nCreated,
+        errors
+      };
     } catch (err) {
       log('createTextIndexByManyTextObjs error');
       throw err;

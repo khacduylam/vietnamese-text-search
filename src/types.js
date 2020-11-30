@@ -1,19 +1,19 @@
 /**
- * @typedef {Object} TextIndex
+ * @typedef {object} TextIndex
  */
 
 /**
- * @typedef {string} TextId
+ * @typedef {string} TextKey
  */
 
 /**
- * @typedef {string} Text
+ * @typedef {string} TextValue
  */
 
 /**
  * @typedef TextObject
- * @property {TextId} textId
- * @property {Text} text
+ * @property {TextKey} textKey
+ * @property {TextValue} textValue
  */
 
 /**
@@ -21,12 +21,16 @@
  */
 
 /**
- * @typedef ScoreObject
- * @property {number} textId
+ * @typedef {number} Score
  */
 
 /**
- * @typedef {[TextId, Text]} ScoreEntry
+ * @typedef ScoreObject
+ * @property {number} textKey
+ */
+
+/**
+ * @typedef {[TextKey, Score]} ScoreEntry
  */
 
 /**
@@ -38,10 +42,49 @@
  */
 
 /**
+ * @typedef CreateIndexOptions
+ * @property {string} textKeyName
+ * @property {string} textValueName
+ * @property {string[]} keywords
+ */
+
+/**
+ * @typedef RemoveIndexOptions
+ * @property {string} textKeyName
+ * @property {string} textValueName
+ * @property {string[]} keywords
+ */
+
+/**
+ * @typedef UpdateIndexOptions
+ * @property {string} textKeyName
+ * @property {string} textValueName
+ * @property {string[]} newKeywords
+ * @property {string[]} removedKeywords
+ */
+
+/**
+ * @typedef ExtractOptions
+ * @property {boolean} toLower
+ * @property {string} textKeyName
+ * @property {string} textValueName
+ */
+
+/**
+ * @typedef InitOptions
+ * @property {number} thresholdScore
+ * @property {-1|1} sortOrder
+ * @property {number} limit
+ * @property {string} textKeyName
+ * @property {string} textValueName
+ */
+
+/**
  * @typedef SearchOptions
  * @property {number} thresholdScore
  * @property {-1|1} sortOrder
  * @property {number} limit
+ * @property {number} offset
  */
 
 /**

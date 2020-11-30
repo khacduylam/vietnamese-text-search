@@ -30,17 +30,24 @@ export default {
 
   /**
    * @param {TextObject[]} textObjs
-   * @param {boolean} toLower
-   * @returns {Promise<[{keywords: Keyword[], pureKeywords: Keyword[], textId: string, text: string}]>}
+   * @param {ExtractOptions} extractOptions
+   * @returns {Promise<[{keywords: Keyword[], pureKeywords: Keyword[], textKey: string, textValue: string}]>}
    */
-  async extractKeywordsFromManyTextObjs(textObjs = [], toLower = false) {
+  async extractKeywordsFromManyTextObjs(
+    textObjs = [],
+    {
+      toLower = false,
+      textKeyName = configs.DefaultKeyName,
+      textValueName = configs.DefaultValueName
+    }
+  ) {
     try {
-      const textArr = textObjs.map((textObj) => textObj.text);
+      const textArr = textObjs.map((textObj) => textObj[textValueName]);
 
       // output: [{ keywords: [], pureKeywords: [] },..]
       const extractedKeywordsArr = await this.extractKeywordsFromManyTexts(textArr, toLower);
 
-      // ouput: [{ keywords: [], pureKeywords: [], textId, text },...]
+      // ouput: [{ keywords: [], pureKeywords: [], textKey, textValue },...]
       const extractedKeywordObjs = textObjs.map((textObj, idx) => ({
         ...textObj,
         ...extractedKeywordsArr[idx]
@@ -53,23 +60,5 @@ export default {
 
       throw err;
     }
-  },
-
-  /**
-   * @param {TextObject} textObj
-   * @returns {boolean}
-   */
-  validateTextObj(textObj) {
-    if (
-      !textObj ||
-      typeof textObj.textId !== 'string' ||
-      !textObj.textId.trim() ||
-      typeof textObj.text !== 'string' ||
-      !textObj.text.trim()
-    ) {
-      return false;
-    }
-
-    return true;
   }
 };

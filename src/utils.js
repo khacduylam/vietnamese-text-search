@@ -1,3 +1,4 @@
+import configs from './config';
 import charmap from './charmap.json';
 const pattern = /[`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/gi;
 const ligatures = ['ch', 'gh', 'gi', 'kh', 'ng', 'ngh', 'nh', 'ph', 'th', 'tr'];
@@ -35,6 +36,7 @@ const specialCharacters = [
   "'",
   'NULLL'
 ];
+const textPattern = /[a-zA-Z0-9_]/g;
 
 export function containsSpecialChars(rawText) {
   if (typeof rawText !== 'string') {
@@ -109,7 +111,6 @@ export function shuffleArray(arr) {
   }
   return array;
 }
-
 export function getNestedObjValues(obj, values) {
   if (!obj) {
     return;
@@ -145,4 +146,81 @@ export function tokenize(rawText, toLower = false) {
   const text = slugifyText(rawText, toLower).replace(pattern, ' ').trim();
 
   return text.split(/\s+/g);
+}
+
+export function validateSearchOptions(options = {}) {
+  try {
+    let { offset, limit, sortOrder, thresholdScore } = options;
+
+    if (!Number.isInteger(+offset) || +offset < 0) {
+      throw new Error('offset must be an integer and greater than or equals 0');
+    }
+    if (!Number.isInteger(+limit) || +limit < 0) {
+      throw new Error('limit must be an integer and greater than or equals 0');
+    }
+    if (Number.isNaN(+thresholdScore) || +thresholdScore < 0) {
+      throw new Error('thresholdScore must be an integer and greater than or equals 0');
+    }
+    if (![-1, 1, '-1', 1].includes(sortOrder)) {
+      throw new Error('sortOrder must be -1: descending | 1: ascending');
+    } else {
+      sortOrder = +sortOrder;
+    }
+
+    return {
+      valid: true,
+      message: 'ok',
+      data: { offset, limit, sortOrder, thresholdScore }
+    };
+  } catch (err) {
+    return { valid: false, message: err.message || 'something went wrong', data: null };
+  }
+}
+
+export function validateInitOptions(options = {}) {
+  let { textKeyName, textValueName, ...searchOptions } = options;
+  const searchValResult = validateSearchOptions(searchOptions);
+  if (!searchValResult.valid) {
+    throw new Error(searchValResult.message);
+  }
+
+  if (typeof textKeyName !== 'string' || !textPattern.test(textKeyName.trim())) {
+    throw new Error('textKeyName can only contains a-z, A-Z, 0-9, _');
+  } else {
+    textKeyName = textKeyName.trim();
+  }
+  if (typeof textValueName !== 'string' || !textPattern.test(textValueName.trim())) {
+    throw new Error('textValueName can only contains a-z, A-Z, 0-9, _');
+  } else {
+    textValueName = textValueName.trim();
+  }
+
+  return {
+    valid: true,
+    message: 'ok',
+    data: { ...searchValResult.data, textKeyName, textValueName }
+  };
+}
+
+export function validateTextObj(
+  textObj = {},
+  { textKeyName = configs.DefaultKeyName, textValueName = configs.DefaultValueName }
+) {
+  const textKey = textObj[textKeyName];
+  const textValue = textObj[textValueName];
+  if (
+    !textObj ||
+    typeof textKey !== 'string' ||
+    !textKey.trim() ||
+    typeof textValue !== 'string' ||
+    !textValue.trim()
+  ) {
+    return { valid: false, message: 'invalid text object', data: null };
+  }
+
+  return {
+    valid: true,
+    message: 'ok',
+    data: { [textKeyName]: textKey.trim(), [textValueName]: textValue.trim() }
+  };
 }

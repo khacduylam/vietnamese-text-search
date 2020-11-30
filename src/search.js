@@ -2,7 +2,7 @@ import textHandler from './text-handler';
 import scoreHandler from './score-handler';
 import configs from './config';
 import indexHandler from './index-handler';
-import { log } from './utils';
+import { log, validateSearchOptions, validateInitOptions } from './utils';
 
 /** @class TextSearch */
 class TextSearch {
@@ -11,6 +11,10 @@ class TextSearch {
     this.textIndex_ = {};
     /** @private  */
     this.textDict_ = {};
+    /** @public */
+    this.textKeyName = configs.DefaultKeyName;
+    /** @public */
+    this.textValueName = configs.DefaultValueName;
     /** @public  */
     this.thresholdScore = configs.DefaultThreshold;
     /** @public  */
@@ -22,7 +26,7 @@ class TextSearch {
   /**
    * Initilize an TextSearch instance with options
    * @param {TextObject} textObjs
-   * @param {SearchOptions} options
+   * @param {InitOptions} options
    * @param {Function} cb
    * @returns {Promise<{nIndices: number}>} { nIndices }
    */
@@ -32,44 +36,38 @@ class TextSearch {
         throw new Error('textObjs must be array');
       }
       const instance = new TextSearch();
-      const {
-        thresholdScore = configs.DefaultThreshold,
-        sortOrder = configs.DefaultSortOrder,
-        limit = configs.DefaultLimit,
-        offset = 0
-      } = options;
-      if (!Number.isNaN(+thresholdScore) && thresholdScore >= 0) {
-        instance.thresholdScore = thresholdScore;
-      } else {
-        throw new Error('thresholdScore is invalid');
-      }
-      if ([-1, 1, '-1', '1'].includes(sortOrder)) {
-        instance.sortOrder = +sortOrder;
-      } else {
-        throw new Error('sortOrder must be -1 or 1');
+      const valResult = validateInitOptions({
+        offset: options.offset || 0,
+        limit: options.limit || configs.DefaultLimit,
+        sortOrder: options.sortOrder || configs.DefaultSortOrder,
+        thresholdScore: options.thresholdScore || configs.DefaultThreshold,
+        textKeyName: options.textKeyName || configs.DefaultKeyName,
+        textValueName: options.textValueName || configs.DefaultValueName
+      });
+      if (!valResult.valid) {
+        throw new Error(valResult.message);
       }
 
-      const { textIndex, nIndices } = await indexHandler.createTextIndexByManyTextObjs(textObjs);
+      Object.entries(valResult.data).forEach(([key, val]) => {
+        instance[key] = val;
+      });
+      const { textKeyName, textValueName } = valResult.data;
+      const { textIndex, nIndices } = await indexHandler.createTextIndexByManyTextObjs(
+        textObjs,
+        null,
+        {
+          textKeyName,
+          textValueName
+        }
+      );
       instance.textIndex_ = textIndex;
 
       instance.textDict_ = {};
       const textObjsSize = textObjs.length;
       let i = 0;
       while (i < textObjsSize) {
-        instance.textDict_[textObjs[i].textId] = textObjs[i];
+        instance.textDict_[textObjs[i][textKeyName]] = textObjs[i];
         i += 1;
-      }
-
-      if (Number.isInteger(+limit) && +limit > -1) {
-        instance.limit = +limit;
-      } else {
-        throw new Error('limit must be greater than or equals 0');
-      }
-
-      if (Number.isInteger(+offset) && +offset > -1) {
-        instance.offset = +offset;
-      } else {
-        throw new Error('offset must be greater than or equals 0');
       }
 
       const result = { nIndices };
@@ -101,6 +99,16 @@ class TextSearch {
         limit = this.limit,
         offset = this.offset
       } = options;
+      const valResult = validateSearchOptions({
+        offset: options.offset || 0,
+        limit: options.limit || this.limit,
+        sortOrder: options.sortOrder || this.sortOrder,
+        thresholdScore: options.thresholdScore || this.thresholdScore
+      });
+      if (!valResult.valid) {
+        throw new Error(valResult.message);
+      }
+
       const { keywords } = textHandler.extractKeywordsFromText(textToSearch, true);
       const rawResult = await scoreHandler.getTextScoresWithManyKeywords(this.textIndex_, keywords);
 
@@ -144,14 +152,17 @@ class TextSearch {
    * @param {TextObject} textObj
    * @param {Function} cb
    * @returns {Promise<{ nUpserted: number, keywords: Keyword[]}>} cb
+   * @deprecated use addTextObj instead.
    */
   async addNewTextObj(textObj, cb = null) {
     try {
-      if (!textHandler.validateTextObj(textObj)) {
-        throw new Error('invalid textObj');
-      }
-      const { keywords } = indexHandler.createIndexForTextObj(this.textIndex_, textObj);
-      this.textDict_[textObj.textId] = textObj;
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+      const { keywords } = indexHandler.createIndexForTextObj(
+        this.textIndex_,
+        valResult.data,
+        baseOptions
+      );
+      this.textDict_[textObj[this.textKeyName]] = textObj;
 
       if (cb) {
         return cb(null, { nUpserted: 1, keywords });
@@ -169,16 +180,18 @@ class TextSearch {
   }
 
   /**
-   * Add many new text objects to `this.textDict_`
+   * Add many text objects to `this.textDict_`
    * @param {TextObject} textObj
    * @param {Function} cb
    * @returns {Promise<{nUpserted: number}>} cb
+   * @deprecated use addManyTextObjs instead.
    */
   async addManyNewTextObjs(textObjs, cb = null) {
     try {
-      await indexHandler.createTextIndexByManyTextObjs(textObjs, this.textIndex_);
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+      await indexHandler.createTextIndexByManyTextObjs(textObjs, this.textIndex_, baseOptions);
       textObjs.reduce((accObj, curObj) => {
-        accObj[curObj.textId] = curObj;
+        accObj[curObj[baseOptions.textKeyName]] = curObj;
         return accObj;
       }, this.textDict_);
 
@@ -198,26 +211,90 @@ class TextSearch {
   }
 
   /**
+   * Add a new text object to `this.textDict_`
+   * @param {TextObject} textObj
+   * @param {Function} cb
+   * @returns {Promise<{ nUpserted: number, keywords: Keyword[]}>} cb
+   */
+  async addTextObj(textObj, cb = null) {
+    try {
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+      const { keywords } = indexHandler.createIndexForTextObj(
+        this.textIndex_,
+        textObj,
+        baseOptions
+      );
+      this.textDict_[textObj[this.textKeyName]] = textObj;
+
+      if (cb) {
+        return cb(null, { nUpserted: 1, keywords });
+      }
+      return { nUpserted: 1, keywords };
+    } catch (err) {
+      log('addNewTextObj error:');
+      log(err);
+      if (cb) {
+        return cb(err);
+      }
+
+      throw err;
+    }
+  }
+
+  /**
+   * Add many text objects to `this.textDict_`
+   * @param {TextObject} textObj
+   * @param {Function} cb
+   * @returns {Promise<{nUpserted: number}>} cb
+   */
+  async addManyTextObjs(textObjs, cb = null) {
+    try {
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+      const { nCreated } = await indexHandler.createTextIndexByManyTextObjs(
+        textObjs,
+        this.textIndex_,
+        baseOptions
+      );
+      textObjs.reduce((accObj, curObj) => {
+        accObj[curObj[baseOptions.textKeyName]] = curObj;
+        return accObj;
+      }, this.textDict_);
+
+      if (cb) {
+        return cb(null, { nUpserted: textObjs.length });
+      }
+      return { nUpserted: nCreated };
+    } catch (err) {
+      log('addManyNewTextObjs error:');
+      log(err);
+      if (cb) {
+        return cb(err);
+      }
+
+      throw err;
+    }
+  }
+
+  /**
    * Update a text object of `this.textDict_`
-   * @param {TextId} textId
+   * @param {TextKey} textKey
    * @param {TextObject} textObj
    * @param {Function} cb
    * @returns {Promise<{ nUpserted: number, newKeywords: Keyword[], removedKeywords: Keyword[]}>} cb
    */
-  async updateTextObj(textId, textObj, cb = null) {
+  async updateTextObj(textKey, textObj, cb = null) {
     try {
-      if (!textHandler.validateTextObj(textObj)) {
-        throw new Error('invalid textObj');
-      }
-      if (!this.textDict_[textId]) {
-        throw new Error('textId not found');
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+      if (!this.textDict_[textKey]) {
+        throw new Error('textKey not found');
       }
       const { newKeywords, removedKeywords } = await indexHandler.updateIndexOfTextObj(
         this.textIndex_,
-        this.textDict_[textId],
-        textObj
+        this.textDict_[textKey],
+        textObj,
+        baseOptions
       );
-      this.textDict_[textId] = textObj;
+      this.textDict_[textKey] = textObj;
 
       const result = { nUpserted: 1, newKeywords, removedKeywords };
       if (cb) {
@@ -237,20 +314,22 @@ class TextSearch {
 
   /**
    * Remove a text object from `this.textDict_`
-   * @param {TextId} textId
+   * @param {TextKey} textKey
    * @param {Function} cb
    * @returns {Promise<{ nRemoved: number, removedKeywords: Keyword[]}>} cb
    */
-  async removeTextObj(textId, cb = null) {
+  async removeTextObj(textKey, cb = null) {
     try {
-      if (!this.textDict_[textId]) {
-        throw new Error('textId not found');
+      if (!this.textDict_[textKey]) {
+        throw new Error('textKey not found');
       }
+      const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
       const { removedKeywords } = indexHandler.removeIndexOfTextObj(
         this.textIndex_,
-        this.textDict_[textId]
+        this.textDict_[textKey],
+        baseOptions
       );
-      delete this.textDict_[textId];
+      delete this.textDict_[textKey];
 
       const result = { nRemoved: 1, removedKeywords };
       if (cb) {
@@ -270,29 +349,30 @@ class TextSearch {
 
   /**
    * Remove many text objects from `this.textDict_`,
-   * leave textIds = [] for removing all text indices
-   * @param {TextId[]} textIds
+   * leave textKeys = [] for removing all text indices
+   * @param {TextKeys[]} textKeys
    * @param {Function} cb
    * @returns {Promise<{nRemoved: number}>} cb
    */
-  async removeManyTextObjs(textIds, cb = null) {
+  async removeManyTextObjs(textKeys, cb = null) {
     try {
       const self = this;
-      if (!Array.isArray(textIds)) {
-        throw new Error('textIds must be array');
+      if (!Array.isArray(textKeys)) {
+        throw new Error('textKeys must be array');
       }
       let nRemoved = 0;
-      if (!textIds.length) {
-        nRemoved = Object.keys(self.textDict_);
+      if (!textKeys.length) {
+        nRemoved = Object.keys(self.textDict_).length;
         this.textIndex_ = {};
         this.textDict_ = {};
       } else {
-        const removedTextIds = [...new Set(textIds)];
-        nRemoved = removedTextIds.reduce((acc, cur) => {
+        const removedTextKeys = [...new Set(textKeys)];
+        const baseOptions = { textKeyName: this.textKeyName, textValueName: this.textValueName };
+        nRemoved = removedTextKeys.reduce((acc, cur) => {
           if (!self.textDict_[cur]) {
-            throw new Error('textId not found');
+            throw new Error('textKey not found');
           }
-          indexHandler.removeIndexOfTextObj(self.textIndex_, self.textDict_[cur]);
+          indexHandler.removeIndexOfTextObj(self.textIndex_, self.textDict_[cur], baseOptions);
           delete self.textDict_[cur];
 
           acc += 1;

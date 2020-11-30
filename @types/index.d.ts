@@ -1,18 +1,18 @@
 declare namespace TextSearch {
-  type TextId = string;
+  type TextKey = string;
   type TextIndex = object;
-  type Text = string;
+  type TextValue = string;
   type Keyword = string;
   type Score = number;
   type ScoreEntry = [TextId, Score];
 
   interface TextObject {
-    textId: TextId;
-    text: Text;
+    textKey: TextKey;
+    text: TextValue;
   }
 
   interface ScoreObject {
-    textId: Score;
+    textKey: Score;
   }
 
   interface Text4levelsObject {
@@ -20,6 +20,15 @@ declare namespace TextSearch {
     l1: Set<TextId>;
     l2: Set<TextId>;
     l3: Set<TextId>;
+  }
+
+  interface InitOptions {
+    textKeyName: string;
+    textValueName: string;
+    thresholdScore: Score;
+    offset: number;
+    limit: number;
+    sortOrder: -1 | 1;
   }
 
   interface SearchOptions {
@@ -47,7 +56,7 @@ declare module 'vietnamese-text-search' {
     /** Initilize an instance of class `TextSearch` and fetch text objects to its text dictionary with default search options. */
     public static init(
       textObjs: TextSearch.TextObject[],
-      options: TextSearch.SearchOptions,
+      options: TextSearch.InitOptions,
       cb?: Function
     ): Promise<TextSearch>;
 
@@ -58,21 +67,39 @@ declare module 'vietnamese-text-search' {
       cb?: Function
     ): Promise<TextSearch.SearchResult>;
 
-    /** Add a new text object to instance's text dictionary. */
+    /**
+     * Add a new text object to instance's text dictionary.
+     * @deprecated use addTextObj instead.
+     */
     public addNewTextObj(
       textObj: TextSearch.TextObject,
       cb?: Function
     ): Promise<{ nUpserted: number; keywords: TextSearch.Keyword[] }>;
 
-    /** Add many new text objects to instance's text dictionary. */
+    /**
+     * Add many new text objects to instance's text dictionary.
+     * @deprecated use addManyTextObjs instead.
+     */
     public addManyNewTextObjs(
+      textObjs: TextSearch.TextObject[],
+      cb?: Function
+    ): Promise<{ nUpserted: number }>;
+
+    /** Add a new text object to instance's text dictionary. */
+    public addTextObj(
+      textObj: TextSearch.TextObject,
+      cb?: Function
+    ): Promise<{ nUpserted: number; keywords: TextSearch.Keyword[] }>;
+
+    /** Add many text objects to instance's text dictionary. */
+    public addManyTextObjs(
       textObjs: TextSearch.TextObject[],
       cb?: Function
     ): Promise<{ nUpserted: number }>;
 
     /** Update a text object of instance's text dictionary. */
     public updateTextObj(
-      textId: TextSearch.TextId,
+      textKey: TextSearch.TextKey,
       textObj: TextSearch.TextObject,
       cb?: Function
     ): Promise<{
@@ -83,13 +110,13 @@ declare module 'vietnamese-text-search' {
 
     /** Remove a text object from instance's text dictionary. */
     public removeTextObj(
-      textId: TextSearch.TextId,
+      textKey: TextSearch.TextKey,
       cb?: Function
     ): Promise<{ nRemoved: number; removedKeywords: TextSearch.Keyword[] }>;
 
     /** Remove many text objects from instance's text dictionary. */
     public removeManyTextObjs(
-      textIds: TextSearch.TextId[],
+      textKeys: TextSearch.TextKey[],
       cb?: Function
     ): Promise<{ nRemoved: number }>;
   }
