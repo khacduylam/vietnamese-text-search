@@ -21,6 +21,13 @@ npm install vietnamese-text-search
 ```javascript
 const TextSearch = require('vietnamese-text-search');
 ```
+
+#### ES6
+
+```javascript
+import TextSearch from 'vietnamese-text-search';
+```
+
 ### Example
 
 ##### Initialize a `TextSearch`'s instance for searching on product's names
