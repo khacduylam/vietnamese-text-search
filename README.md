@@ -43,37 +43,46 @@ import TextSearch from 'vietnamese-text-search';
     sortOrder: -1,         // Default: -1
     textKeyName: 'id',     // Default: 'textId'
     textValueName: 'name'  // Default: 'text'
+    useAddedScore: false   // Default: false
+    autoGenBucket: true    // Default: true
   };
-  // Initialize textSearch instance with `TextObjs` may take some seconds (depends on text object's size).
+  // Initialize textSearch instance with `ProductObjs` and `options`
   const textSearch = await TextSearch.init(ProductObjs, options);
   ...
 })
 ```
 
-##### Add a new `product` to textSearch's dictionary
+##### Add a new `product` to bucket `products`
 
 ```javascript
 // ...
-const product = { id: '123', name: 'mặt nạ siêu thấm hút Aqua' };
-// Because we initialized a `TextSearch`'s instance with {..., textKeyName: 'id', textValueName: 'name'}, so any other product which added to the instance's dictionary later should has format { id: ..., name: ... }
-const addResult = await textSearch.addNewTextObj(product);
+const product = { id: '123', name: 'mặt nạ siêu thấm hút Aqua', addedScore: 0.1 };
+// Because we initialized a `TextSearch`'s instance with {..., textKeyName: 'id', textValueName: 'name'}, so any other product which added to the bucket later should has format { id: ..., name: ... }
+const addResult = await textSearch.addNewTextObj(product, { bucket: 'products' });
 console.log(addResult);
 
-// { nUpserted: 1 }
+// { nAdded: 1, bucket: 'products' }
 // ...
 ```
 
-##### Search for `mặt nạ Aqua`
+##### Search for `mặt nạ Aqua` 
 
 ```javascript
 // ...
-const searchResult = await textSearch.search('mặt nạ Aqua', { limit: 10, thresholdScore: 1 }); // override default options
+// Search with options
+const searchOptions = {
+  limit: 10,
+  thresholdScore: 1,
+  useAddedScore: true, // this options will affected to the rank of the final results
+  buckets: ['products'] // only search on bucket `products`
+};
+const searchResult = await textSearch.search('mặt nạ Aqua', searchOptions);
 console.log(searchResult);
 
 // {
 //   data: [
 //     // [id, score]
-//     [ '123', 4.6 ],
+//     [ '123', 4.69999999999... ],
 //     ...
 //   ],
 //   sortOrder: -1,
@@ -86,59 +95,48 @@ console.log(searchResult);
 // ...
 ```
 
-##### Update product's name of a `product` from textSearch's dictionary
+##### Update the name and addedScore field of a product
 
 ```javascript
 // ...
-const upProduct = { id: '123', name: 'mặt nạ siêu thấm ngược Aqua' };
-const updateResult = await textSearch.updateTextObj(upProduct.id, upProduct);
+const upProduct = { id: '123', name: 'mặt nạ siêu thấm ngược Aqua', addedScore: 0.2 };
+const updateResult = await textSearch.updateTextObj(upProduct.id, upProduct, {
+  bucket: 'products'
+});
 console.log(updateResult);
 
-// { nUpserted: 1, newKeywords: [ 'ngược' ], removedKeywords: [ 'hút' ] }
+// { nUpserted: 1, bucket: 'products' }
 // ...
 ```
 
-##### Remove a `product` from textSearch's dictionary
+##### Remove a product
 
 ```javascript
 // ...
-const removeResult = await textSearch.removeTextObj('123');
+const removeResult = await textSearch.removeTextObj('123', { bucket: 'products' });
 console.log(removeResult);
 
-// { nRemoved: 1, removedKeywords: [ 'mặt', 'nạ', 'siêu', 'thấm', 'ngược', 'Aqua' ] }
+// { nRemoved: 1, bucket: 'products' }
 // ...
 ```
 
 ## APIs
 
-| API                                  | Description                                                                                                            |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| .init(textObjs, options)             | Initilize a `TextSearch`'s instance with array of text objects and [Initilization Options](#initilization-options)     |
-| ~~.addNewTextObj(newTextObj)~~       | Add a new `TextObject` to `TextSearch` instance's dictionary _(TextObject's format: { textId: string, text: string })_ |
-| ~~.addManyNewTextObjs(newTextObjs)~~ | Add many new `TextObject` to `TextSearch` instance's dictionary                                                        |
-| .addTextObj(newTextObj)              | Add a new `TextObject` to `TextSearch` instance's dictionary _(TextObject's format: { textId: string, text: string })_ |
-| .addManyTextObjs(newTextObjs)        | Add many new `TextObject` to `TextSearch` instance's dictionary                                                        |
-| .updateTextObj(textKey, textObj)     | Update field `text` of a `TextObject` from `TextSearch` instance's dictionary                                          |
-| .removeTextObj(textKey)              | Remove a `TextObject` from `TextSearch` instance's dictionary                                                          |
-| .removeManyTextObjs(textKeys)        | Remove many `TextObject` from `TextSearch` instance's dictionary _(remove all when textKeys is [])_                    |
-| .search(text, options)               | Search for `text` from `TextSearch` instance's dictionary with [Search Options](#search-options)                       |
+| API                                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **.init(textObjs, options, cb)**                  | Initialize a `TextSearch`'s instance with options.<br><br>**Params**:<br>&emsp; **`textObjs`**: Array of text objects (e.g. [{ id: '123, name: 'Son môi siêu thấm hút', addedScore: 0.1 }, ...]).<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **limit** _(number, default: 30)_: Limit number of search results.<br>&emsp;&emsp; **sortOrder** _(-1:Descending, 1: Ascending, default: -1)_: Order of results by score.<br>&emsp;&emsp; **thresholdScore** _(number, default: 0.5)_: Only results which have the text score >= this threshold should be returned.<br>&emsp;&emsp; **textKeyName** _(string, default: 'textId')_: Field used as `key` of a text object.<br>&emsp;&emsp; **textValueName** _(string, default: 'text')_: Field used as `value` of a text object.<br>&emsp;&emsp; **autoGenBucket** _(boolean, default: true)_: When Adding new text objects, Generate new bucket if not exist.<br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Bucket which text objects will be added into when initializing a `TextSearch`'s instance with `textObjs`<br>&emsp;&emsp; **useAddedScore** _(boolean, default: false)_: `addedScore` from each text object will be added to its score when ranking results by the score.<br>&emsp; }<br><br>**Return**: _{Promise\<TextSearch\>}_ |
+| **.search(text, options, cb)**                    | Search for `text`.<br><br>**Params**:<br>&emsp; **`text`**: Text to search (e.g. _son môi aqua_).<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **limit** _(number, default: 30)_: Limit number of search results.<br>&emsp;&emsp; **sortOrder** _(-1:Descending, 1: Ascending, default: -1)_: Order of results by score.<br>&emsp;&emsp; **thresholdScore** _(number, default: 0.5)_: Only results which have the text score >= this threshold should be returned.<br>&emsp;&emsp; **buckets** _(string, default: [all buckets])_: Only search in this `buckets`.<br>&emsp;&emsp; **useAddedScore** _(boolean, default: false)_: `addedScore` from each text object will be added to its score when ranking results by the score.<br>&emsp; }<br><br>**Return**: _{Promise\<{ data: \[\[\<textKey\>, \<score\>\], ...\], total: number, text: string, ...[options] }\>}_                                                                                                                                                                                                                                                                                                                                                                                              |
+| **.addTextObj(textObj, options, cb)**             | Add a new text object.<br><br>**Params**:<br>&emsp; **`textObj`**: Text object to add (e.g. _{ id: '123', name: 'Son môi siêu thấm hút' }_).<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Add new text object to this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nAdded: number, bucket: string }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **.addManyTextObjs(textObjs, options, cb)**       | Add many text objects.<br><br>**Params**:<br>&emsp; **`textObjs`**: Array of text objects to add.<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Add new text objects to this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nAdded: number, details: {\*} }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **.updateTextObj(textKey, textObj, options, cb)** | Update a text object.<br><br>**Params**:<br>&emsp; **`textKey`**: Text key of object to update.<br>&emsp; **`textObj`**: This text object will be merged with the old or added to a bucket if option `upsert` is **true**.<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **upsert** _(boolean, default: false)_: Add the text object if not exist.<br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Update text object in this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nUpserted: number, bucket: string }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **.updateManyTextObjs(textObjs, options, cb)**    | Update many text objects.<br><br>**Params**:<br>&emsp; **`textObjs`**: This text objects will be merged with the old or added to a bucket if option `upsert` is **true**.<br>&emsp; _(Note: Text objects must contain text key, the text key will be used to find the object need to update (e.g. _\[{id: '123', name: 'Son môi siêu thấm ngược Alan', addedScore: 0.2}, ...\]_)_<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **upsert** _(boolean, default: false): Add the text object if not exist._<br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Update text objects in this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nUpserted: number, details: {\*} }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **.removeTextObj(textKey, options, cb)**          | Remove a text object.<br><br>**Params**:<br>&emsp; **`textKey`**: Text key of object to remove.<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **forceRemove** _(boolean, default: false)_: Do not throw an error if `textKey` not found. <br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Remove text object from this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nUpserted: number, bucket: string }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **.removeTextObjs(textKeys, options, cb)**        | Remove many text objects.<br><br>**Params**:<br>&emsp; **`textKeys`**: Remove text objects with these text keys.<br><br>&emsp; **`options`**: {<br>&emsp;&emsp; **forceRemove** _(boolean, default: false)_: Do not throw an error if `textKey` not found. <br>&emsp;&emsp; **bucket** _(string, default: 'default')_: Remove text object from this bucket.<br>&emsp; }<br><br>**Return**: _{Promise\<{ nRemoved: number, details: {\*} }\>}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **.removeBuckets(buckets)**                       | Remove text bucket(s).<br><br>**Params**:<br>&emsp; **`buckets`**: Remove a bucket (e.g. 'products') or remove many buckets (e.g. \['products', 'stores', 'companies'\]).<br><br>**Return**: _{{ nRemoved: number, nRemains: number }}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **.getStats()**                                   | Get stats of the instance.<br><br>**Return**: _{{ nObjects: number, nIndices: number }}_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
-## Options
+## Notes
 
-### Search options
+1. **TextObject** should has format like _{ **textId**: '123', **text**: 'Son môi siêu thấm hút', addedScore: 0.1 }_ if options `textKeyName` and `textValueName` are not be set when initializing the instance. Otherwise, the object should has format _{ **[textKeyName]**: textKey, **[textValueName]**: textValue, addedScore: 0.1 }_.
 
-1. `limit`(number) - Limit number of search results (_default: 30_).
-1. `offset`(number) - Used with limit for page pagination (_default: 0_).
-1. `sortOrder` (-1: descending | 1: ascending) - The order of _text score_ results (_default: -1_).
-1. `thresholdScore`(number) - "Threshold" of score to return results (_default: 0.5_).
-
-### Initilization options
-
-1. `limit`(number) - Default limit number of search results (_default: 30_).
-1. `offset`(number) - Default offset (default: 0).
-1. `sortOrder` (-1: descending | 1: ascending) - The default order of _text score_ results.
-1. `thresholdScore`(number) - "Threshold" of score to return results.
-1. { `textKeyName`, `textValueName` } - This option allows you custom default key's name and value's name when initializing a `TextSearch` instance (e.g. _{ **id**: '123', **name**: 'son môi siêu thấm hút' }_ instead of _{ **textId**: '123', **text**: 'son môi siêu thấm hút' }_ as default).
-
-> **_Note:_**
-> You can always override initialization options when using the search API.
+1. **addedScore** of a text object is 0.0 if a text object not include it.

@@ -1,4 +1,4 @@
-import { getNestedObjValues, getLigatures, removeAccents, log } from './utils';
+import { getNestedObjValues, getLigatures, removeAccents } from './utils';
 import configs from './config';
 
 export default {
@@ -50,42 +50,55 @@ export default {
   /**
    * @param {TextIndex} textIndex
    * @param {Keyword} keyword
-   * @param {Text4lsObject} textKeysObj
+   * @param {GetTextScoreOptions} options
    * @returns {ScoreObject} { textKey1: score1, textKey2: score2, ... }
    */
-  getTextScoresWithKeyword(textIndex, keyword, textKeysObj = {}) {
-    let { l0, l1, l2, l3 } = textKeysObj;
-    if (!textKeysObj || Object.keys(textKeysObj).length !== 4) {
-      let { l0: _l0, l1: _l1, l2: _l2, l3: _l3 } = this.getAll4LsTextIds(textIndex, keyword);
-      l0 = _l0;
-      l1 = _l1;
-      l2 = _l2;
-      l3 = _l3;
-    }
-    const allTextIds = new Set([...l0, ...l1, ...l2, ...l3]);
+  async getTextScoresWithKeyword(textBucket, keyword, options = {}) {
+    const { buckets = Object.keys(textBucket), useAddedScore = false, keysLength = 1 } = options;
+    const scoreObjs = await Promise.all(
+      buckets.map((bucket) => {
+        const textIndex = textBucket[bucket].textIndex;
+        const { l0, l1, l2, l3 } = this.getAll4LsTextIds(textIndex, keyword);
+        const allTextIds = new Set([...l0, ...l1, ...l2, ...l3]);
 
-    const topTextObjs = [...allTextIds].reduce((acc, cur) => {
-      let score = 0;
-      const coeff01 = getLigatures(keyword).length;
-      l0.has(cur) && (score += configs.ScoreL0 * coeff01);
-      l1.has(cur) && (score += configs.ScoreL1 * coeff01);
-      l2.has(cur) && (score += configs.ScoreL2);
-      l3.has(cur) && (score += configs.ScoreL3);
-      acc[cur] = score;
-      return acc;
-    }, {});
-
-    return topTextObjs;
+        const topTextObjs = [...allTextIds].reduce((acc, cur) => {
+          let score = 0;
+          const coeff01 = getLigatures(keyword).length;
+          l0.has(cur) && (score += configs.ScoreL0 * coeff01);
+          l1.has(cur) && (score += configs.ScoreL1 * coeff01);
+          l2.has(cur) && (score += configs.ScoreL2);
+          l3.has(cur) && (score += configs.ScoreL3);
+          const textObj = textBucket[bucket].textDict[cur];
+          if (textObj) {
+            acc[cur] = score + (+useAddedScore * textObj.addedScore) / keysLength;
+          }
+          return acc;
+        }, {});
+        return topTextObjs;
+      })
+    );
+    return this.mergeScoreObjs(scoreObjs);
   },
 
   /**
-   * @param {TextIndex} textIndex
+   * @param {TextBucket} textBucket
    * @param {Keyword[]} keywords
+   * @param {GetTextScoreOptions} options
    * @returns {Promise<ScoreEntry[]>} [ [textKey1, score1], [textKey2, score2], ... ]
    */
-  async getTextScoresWithManyKeywords(textIndex, keywords) {
+  async getTextScoresWithManyKeywords(textBucket, keywords, options = {}) {
+    const { buckets = Object.keys(textBucket), useAddedScore = false } = options;
+    if (!buckets.length) {
+      return [];
+    }
     const textScoreObjs = await Promise.all(
-      keywords.map((keyword) => this.getTextScoresWithKeyword(textIndex, keyword))
+      keywords.map((keyword) =>
+        this.getTextScoresWithKeyword(textBucket, keyword, {
+          buckets,
+          useAddedScore,
+          keysLength: keywords.length
+        })
+      )
     );
     const mergedTextScoresObj = this.mergeScoreObjs(textScoreObjs);
     return Object.entries(mergedTextScoresObj);

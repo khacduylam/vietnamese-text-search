@@ -1,4 +1,4 @@
-import { removeAccents, validateTextObj, intersect, getLigatures, log } from './utils';
+import { removeAccents, intersect, getLigatures, log, compare2Objs } from './utils';
 import configs from './config';
 import textHandler from './text-handler';
 
@@ -8,10 +8,10 @@ export default {
    * @param {TextIndex} textIndex
    * @param {TextObject} textObj
    * @param {CreateIndexOptions} options
-   * @returns {{keywords: Keyword[]}} new keywords which are created indices for
+   * @returns {{bucket: string, keywords: Keyword[]}} { bucket: string, keywords: [] }
    */
   createIndexForTextObj(
-    textIndex = {},
+    textBucket = {},
     textObj,
     {
       textKeyName = configs.DefaultKeyName,
@@ -19,13 +19,9 @@ export default {
       keywords: newKeywords = []
     }
   ) {
-    const valResult = validateTextObj(textObj, { textKeyName, textValueName });
-    if (!valResult.valid) {
-      throw new Error(valResult.message);
-    }
-
-    const textKey = valResult.data[textKeyName];
-    const textValue = valResult.data[textValueName];
+    const textKey = textObj[textKeyName];
+    const textValue = textObj[textValueName];
+    const bucket = textObj['bucket'];
 
     let keywords = newKeywords;
     let pureKeywords = keywords.map((kw) => removeAccents(kw));
@@ -36,6 +32,14 @@ export default {
       } = textHandler.extractKeywordsFromText(textValue, true);
       keywords = _keywords;
       pureKeywords = _pureKeywords;
+    }
+
+    let textIndex = null;
+    if (textBucket[bucket]) {
+      textIndex = textBucket[bucket].textIndex;
+    } else {
+      textBucket[bucket] = { textIndex: {}, textDict: {} };
+      textIndex = textBucket[bucket].textIndex;
     }
 
     const length = pureKeywords.length;
@@ -56,26 +60,26 @@ export default {
             const textIndexL2 = textIndexL1[pureKeyword];
             // nested level 3
             if (textIndexL2[keyword]) {
-              textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword].add(
-                textKey
-              );
+              textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][
+                keyword
+              ].add(textKey);
             } else {
-              textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword] = new Set([
-                textKey
-              ]);
+              textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][
+                keyword
+              ] = new Set([textKey]);
             }
           } else {
-            textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword] = {
+            textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword] = {
               [keyword]: new Set([textKey])
             };
           }
         } else {
-          textIndex[firstPureKeywordChars][firstKeywordChars] = {
+          textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars] = {
             [pureKeyword]: { [keyword]: new Set([textKey]) }
           };
         }
       } else {
-        textIndex[firstPureKeywordChars] = {
+        textBucket[bucket].textIndex[firstPureKeywordChars] = {
           [firstKeywordChars]: {
             [pureKeyword]: { [keyword]: new Set([textKey]) }
           }
@@ -85,7 +89,9 @@ export default {
       i += 1;
     }
 
-    return { keywords };
+    textBucket[bucket].textDict[textKey] = textObj;
+
+    return { bucket, keywords };
   },
 
   /**
@@ -93,10 +99,10 @@ export default {
    * @param {TextIndex} textIndex
    * @param {TextObject} textObj
    * @param {RemoveIndexOptions} options
-   * @returns {{keywords: Keyword[]}} keywords which are created indices from before
+   * @returns {{bucket: string, keywords: Keyword[]}} { bucket:string, keywords: [] }
    */
   removeIndexOfTextObj(
-    textIndex,
+    textBucket = {},
     textObj,
     {
       textKeyName = configs.DefaultKeyName,
@@ -104,13 +110,9 @@ export default {
       keywords: removedKeywords = []
     }
   ) {
-    const valResult = validateTextObj(textObj, { textKeyName, textValueName });
-    if (!valResult.valid) {
-      throw new Error(valResult.message);
-    }
-
-    const textKey = valResult.data[textKeyName];
-    const textValue = valResult.data[textValueName];
+    const bucket = textObj['bucket'];
+    const textKey = textObj[textKeyName];
+    const textValue = textObj[textValueName];
 
     let keywords = removedKeywords;
     let pureKeywords = keywords.map((kw) => removeAccents(kw));
@@ -123,6 +125,13 @@ export default {
       pureKeywords = _pureKeywords;
     }
 
+    let textIndex = null;
+    if (textBucket[bucket]) {
+      textIndex = textBucket[bucket].textIndex;
+    } else {
+      textBucket[bucket] = { textIndex: {}, textDict: {} };
+      textIndex = textBucket[bucket].textIndex;
+    }
     const length = pureKeywords.length;
     let i = 0;
     while (i < length) {
@@ -130,6 +139,7 @@ export default {
       const firstKeywordChars = getLigatures(keyword);
       const pureKeyword = pureKeywords[i];
       const firstPureKeywordChars = removeAccents(firstKeywordChars);
+
       // nested level 0
       if (textIndex[firstPureKeywordChars]) {
         const textIndexL0 = textIndex[firstPureKeywordChars];
@@ -148,23 +158,28 @@ export default {
               const textIndexL3Size = Object.keys(textIndexL3).length;
               // delete textKey out of index L3 (if exists)
               if (textIndexL3.has(textKey)) {
-                textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword].delete(
-                  textKey
-                );
+                textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][
+                  keyword
+                ].delete(textKey);
 
                 // delete index level3 if empty
-                textIndexL3Size === 1 &&
-                  delete textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword][keyword];
+                textIndexL3Size <= 1 &&
+                  delete textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][
+                    pureKeyword
+                  ][keyword];
 
                 // delete index level2 if empty
-                textIndexL2Size === 1 &&
-                  delete textIndex[firstPureKeywordChars][firstKeywordChars][pureKeyword];
+                textIndexL2Size <= 1 &&
+                  delete textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars][
+                    pureKeyword
+                  ];
 
                 // delete index level1 if empty
-                textIndexL1Size === 1 && delete textIndex[firstPureKeywordChars][firstKeywordChars];
+                textIndexL1Size <= 1 &&
+                  delete textBucket[bucket].textIndex[firstPureKeywordChars][firstKeywordChars];
 
                 // delete index level0 if empty
-                textIndexL0Size === 1 && delete textIndex[firstPureKeywordChars];
+                textIndexL0Size <= 1 && delete textBucket[bucket].textIndex[firstPureKeywordChars];
               }
             }
           }
@@ -174,19 +189,21 @@ export default {
       i += 1;
     }
 
-    return { removedKeywords: keywords };
+    delete textBucket[bucket].textDict[textKey];
+
+    return { bucket, removedKeywords: keywords };
   },
 
   /**
    * @description Update created text indices of a single text object
-   * @param {TextIndex} textIndex
+   * @param {TextBucket} textBucket
    * @param {TextObject} oldTextObj
    * @param {TextObject} textObj
    * @param {UpdateIndexOptions} options
-   * @returns {Promise<{newKeywords: Keyword[], removedKeywords: Keyword[]}>}
+   * @returns {Promise<{bucket: string, newKeywords: Keyword[], removedKeywords: Keyword[], nUpdated: number, nAdded: number}>} { bucket: string, newKeywords: [], removedKeywords: [], nUpdated: number, nAdded: number }
    */
   async updateIndexOfTextObj(
-    textIndex,
+    textBucket,
     oldTextObj,
     textObj,
     {
@@ -196,48 +213,75 @@ export default {
       oldKeywords: _oldKeywords = []
     }
   ) {
+    const bucket = textObj['bucket'];
+    const textKey = textObj[textKeyName];
+    const textValue = textObj[textValueName];
+    const textOldValue = oldTextObj ? oldTextObj[textValueName] : '';
+
     let keywords = _keywords;
     let oldKeywords = _oldKeywords;
     if (!keywords.length) {
       const { keywords: keywordsFromTextObj } = textHandler.extractKeywordsFromText(
-        textObj[textValueName]
+        textValue,
+        true
       );
       keywords = keywordsFromTextObj;
     }
+
     if (!oldKeywords.length) {
-      const { keywords: keywordsFromOldTextObj } = textHandler.extractKeywordsFromText(
-        oldTextObj[textValueName]
-      );
+      const { keywords: keywordsFromOldTextObj } = oldTextObj
+        ? textHandler.extractKeywordsFromText(textOldValue, true)
+        : { keywords: [] };
       oldKeywords = keywordsFromOldTextObj;
     }
     const { diff1: removedKeywords, diff2: newKeywords } = intersect(oldKeywords, keywords);
-
     const baseOptions = { textKeyName, textValueName };
+
+    if (!removedKeywords.length && !newKeywords.length) {
+      const isSame = compare2Objs(oldTextObj, textObj);
+      isSame && (textBucket[bucket].textDict[textKey] = textObj);
+      return { bucket, newKeywords: [], removedKeywords: [], nUpdated: 1, nAdded: 0 };
+    }
+
     if (removedKeywords.length) {
-      this.removeIndexOfTextObj(textIndex, oldTextObj, {
+      this.removeIndexOfTextObj(textBucket, oldTextObj, {
         ...baseOptions,
         keywords: removedKeywords
       });
     }
 
+    const oldObj = { ...(oldTextObj || {}) };
+    const newObj = { ...textObj };
+    delete oldObj[textKeyName];
+    const newTextObj = { ...oldObj, ...newObj };
+
     if (newKeywords.length) {
-      this.createIndexForTextObj(textIndex, textObj, { ...baseOptions, keywords: newKeywords });
+      this.createIndexForTextObj(textBucket, newTextObj, {
+        ...baseOptions,
+        keywords: newKeywords
+      });
     }
 
-    return { newKeywords, removedKeywords };
+    return {
+      bucket,
+      newKeywords,
+      removedKeywords,
+      nUpdated: +!!removedKeywords.length,
+      nAdded: +!removedKeywords.length
+    };
   },
 
   /**
    * Create text indices from many text objects, if the second argument is passed to the function,
-   * then using this argument as global textIndex for indexing new text objects.
+   * then using this argument as global textBucket for indexing new text objects.
    * @param {TextObject[]} textObjs
-   * @param {TextIndex} textIndex
+   * @param {TextBucket} textBucket
    * @param {CreateIndexOptions} options
-   * @returns {Promise<{textIndex: TextIndex, nIndices: number, nCreated: number, errors: TextKey[]}>} Global text index
+   * @returns {Promise<{textBucket: TextBucket, totalIndices: number, totalObjects: number, emptyKeywordKeys: TextKey[], details: object}>} { textBucket: {}, totalIndices: number, totalObjects: number, emptyKeywordKeys: [], details: {} }
    */
   async createTextIndexByManyTextObjs(
     textObjs = [],
-    textIndex = null,
+    textBucket = null,
     { textKeyName = configs.DefaultKeyName, textValueName = configs.DefaultValueName }
   ) {
     try {
@@ -252,30 +296,43 @@ export default {
         textValueName
       });
 
-      let nCreated = 0;
-      const errors = [];
-      const globalIndex = keywordObjs.reduce((accObj, { keywords, pureKeywords, ...textObj }) => {
-        // sometime input text is not at normal form (e.g. '𝐕𝐄𝐑𝐒𝐀𝐂𝐄 𝐀𝐔𝐓𝐇𝐄𝐍𝐓𝐈𝐂 𝟑𝟒𝐦𝐦')
-        if (keywords.length) {
-          this.createIndexForTextObj(accObj, textObj, {
-            keywords,
-            textKeyName,
-            textValueName
-          });
-          nCreated += 1;
-        } else {
-          errors.push(textObj[textKeyName]);
-        }
-        return accObj;
-      }, textIndex || {});
+      const emptyKeywordKeys = [];
+      let totalIndices = 0;
+      let totalObjects = 0;
+      const details = {};
+      const globalTextBucket = keywordObjs.reduce(
+        (accObj, { keywords, pureKeywords, ...textObj }) => {
+          // sometime input text is not at normal form (e.g. '𝐕𝐄𝐑𝐒𝐀𝐂𝐄 𝐀𝐔𝐓𝐇𝐄𝐍𝐓𝐈𝐂 𝟑𝟒𝐦𝐦')
+          if (keywords.length) {
+            const { bucket } = this.createIndexForTextObj(accObj, textObj, {
+              keywords,
+              textKeyName,
+              textValueName
+            });
+            totalIndices += 1;
+            totalObjects += 1;
+            if (details[bucket]) {
+              details[bucket].nAdded += 1;
+              details[bucket].nIndices += keywords.length;
+            } else {
+              details[bucket] = { nAdded: 1, nIndices: keywords.length, errorKeys: [] };
+            }
+          } else {
+            emptyKeywordKeys.push(textObj[textKeyName]);
+          }
+          return accObj;
+        },
+        textBucket || {}
+      );
 
-      log(`[${new Date()}]: Finish indexing for ${nCreated} objects | Error objects: ${errors}`);
-      log(`[${new Date()}]: ${errors}`);
+      log(`[${new Date()}]: Finish indexing for ${totalObjects} objects`);
+      log(`[${new Date()}]: Error object keys ${emptyKeywordKeys}`);
       return {
-        textIndex: globalIndex,
-        nIndices: Object.keys(globalIndex).length,
-        nCreated,
-        errors
+        textBucket: globalTextBucket,
+        totalObjects,
+        totalIndices,
+        emptyKeywordKeys,
+        details
       };
     } catch (err) {
       log('createTextIndexByManyTextObjs error');

@@ -7,6 +7,7 @@ export const DefaultThreshold = 0.5;
 export const DefaultSortOrder = -1;
 export const DefaultKeyName = 'textId';
 export const DefaultValueName = 'text';
+export const DefaultTextBucket = 'default';
 
 export default {
   ScoreL0,
@@ -17,5 +18,6 @@ export default {
   DefaultThreshold,
   DefaultSortOrder,
   DefaultKeyName,
-  DefaultValueName
+  DefaultValueName,
+  DefaultTextBucket
 };

@@ -3,6 +3,10 @@
  */
 
 /**
+ * @typedef {object} TextBucket
+ */
+
+/**
  * @typedef {string} TextKey
  */
 
@@ -14,6 +18,7 @@
  * @typedef TextObject
  * @property {TextKey} textKey
  * @property {TextValue} textValue
+ * @property {number} [addedScore=0]
  */
 
 /**
@@ -42,25 +47,32 @@
  */
 
 /**
+ * @typedef GetTextScoreOptions
+ * @property {string[]} [buckets]
+ * @property {boolean} [useAddedScore]
+ * @property {number} [keysLength]
+ */
+
+/**
  * @typedef CreateIndexOptions
  * @property {string} textKeyName
  * @property {string} textValueName
- * @property {string[]} keywords
+ * @property {string[]} [keywords]
  */
 
 /**
  * @typedef RemoveIndexOptions
  * @property {string} textKeyName
  * @property {string} textValueName
- * @property {string[]} keywords
+ * @property {string[]} [keywords]
  */
 
 /**
  * @typedef UpdateIndexOptions
  * @property {string} textKeyName
  * @property {string} textValueName
- * @property {string[]} newKeywords
- * @property {string[]} removedKeywords
+ * @property {string[]} [newKeywords]
+ * @property {string[]} [removedKeywords]
  */
 
 /**
@@ -72,19 +84,41 @@
 
 /**
  * @typedef InitOptions
- * @property {number} thresholdScore
- * @property {-1|1} sortOrder
- * @property {number} limit
- * @property {string} textKeyName
- * @property {string} textValueName
+ * @property {number} [thresholdScore=0.5]
+ * @property {-1|1} [sortOrder=-1]
+ * @property {number} [limit=30]
+ * @property {string} [textKeyName="textId"]
+ * @property {string} [textValueName="text"]
+ * @property {string} [bucket]
+ * @property {boolean} [useAddedScore=false]
+ * @property {boolean} [autoGenBucket=true]
  */
 
 /**
  * @typedef SearchOptions
- * @property {number} thresholdScore
- * @property {-1|1} sortOrder
- * @property {number} limit
- * @property {number} offset
+ * @property {number} [thresholdScore=0.5]
+ * @property {-1|1} [sortOrder=-1]
+ * @property {number} [limit=30]
+ * @property {number} [offset=0]
+ * @property {string[]} [buckets]
+ * @property {boolean} [useAddedScore=false]
+ */
+
+/**
+ * @typedef AddObjectOptions
+ * @property {string} [bucket="default"]
+ */
+
+/**
+ * @typedef UpdateObjectOptions
+ * @property {string} [bucket="default"]
+ * @property {string} [upsert=false]
+ */
+
+/**
+ * @typedef RemoveObjectOptions
+ * @property {string} [bucket="default"]
+ * @property {string} [forceRemove=false]
  */
 
 /**
@@ -95,5 +129,6 @@
  * @property {number} limit
  * @property {number} total
  * @property {number} offset
+ * @property {string[]} buckets
  * @property {string} text
  */

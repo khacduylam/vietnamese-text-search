@@ -1,6 +1,6 @@
 {
   "name": "vietnamese-text-search",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "Text search for vietnamese.",
   "main": "./index.js",
   "types": "./@types/index.d.ts",
@@ -29,6 +29,8 @@
     "@babel/cli": "^7.12.8",
     "@babel/core": "^7.12.9",
     "@babel/node": "^7.12.6",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-proposal-private-methods": "^7.12.1",
     "@babel/preset-env": "^7.12.7",
     "babel-preset-minify": "^0.5.1",
     "exceljs": "^4.2.0",
