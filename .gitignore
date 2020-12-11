@@ -3,6 +3,6 @@ node_modules/
 .idea
 /logs
 .vscode
-src/test/
+test/
 lib/
 babel.config.*

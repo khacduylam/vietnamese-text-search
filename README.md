@@ -57,7 +57,8 @@ import TextSearch from 'vietnamese-text-search';
 ```javascript
 // ...
 const product = { id: '123', name: 'mặt nạ siêu thấm hút Aqua', addedScore: 0.1 };
-// Because we initialized a `TextSearch`'s instance with {..., textKeyName: 'id', textValueName: 'name'}, so any other product which added to the bucket later should has format { id: ..., name: ... }
+// Because we initialized a `TextSearch`'s instance with {..., textKeyName: 'id', textValueName: 'name'},
+// so any other product which added to the bucket later should has format { id: ..., name: ... }
 const addResult = await textSearch.addNewTextObj(product, { bucket: 'products' });
 console.log(addResult);
 
@@ -73,7 +74,7 @@ console.log(addResult);
 const searchOptions = {
   limit: 10,
   thresholdScore: 1,
-  useAddedScore: true, // this options will affected to the rank of the final results
+  useAddedScore: true, // add `addedScore` when ranking text objects by their text score
   buckets: ['products'] // only search on bucket `products`
 };
 const searchResult = await textSearch.search('mặt nạ Aqua', searchOptions);
@@ -82,7 +83,7 @@ console.log(searchResult);
 // {
 //   data: [
 //     // [id, score]
-//     [ '123', 4.69999999999... ],
+//     [ '123', 4.69999999999... ], 
 //     ...
 //   ],
 //   sortOrder: -1,
@@ -95,7 +96,7 @@ console.log(searchResult);
 // ...
 ```
 
-##### Update the name and addedScore field of a product
+##### Update the `name` and `addedScore` of a product
 
 ```javascript
 // ...

@@ -52,6 +52,12 @@ class TextSearch {
     this.useAddedScore = useAddedScore;
   }
 
+  #initBucketIfNotExist(bucket) {
+    if (!this.#textBucket[bucket]) {
+      this.#textBucket[bucket] = { textIndex: {}, textDict: {} };
+    }
+  }
+
   #validateAddParams(textObj = {}, options = {}) {
     const textKeyName = this.#textKeyName;
     const textValueName = this.#textValueName;
@@ -69,7 +75,10 @@ class TextSearch {
       !textValue.trim() ||
       Number.isNaN(+addedScore)
     ) {
-      return { valid: false, message: `invalid text object [${textKey}]` };
+      return {
+        valid: false,
+        message: `invalid text object [${textKey}] or textKeyName & textValueName of the object not match with the initialization configs`
+      };
     }
     if (bucket) {
       if (typeof bucket !== 'string' || !(bucket.trim() + '')) {
@@ -299,15 +308,21 @@ class TextSearch {
     } else {
       valOptions.bucket = configs.DefaultTextBucket;
     }
-    if (typeof textKeyName !== 'string' || !textPattern.test(textKeyName.trim())) {
-      throw new Error('textKeyName can only contains a-z, A-Z, 0-9, _');
-    } else {
+    if (textKeyName) {
+      if (typeof textKeyName !== 'string' || !textPattern.test(textKeyName.trim())) {
+        throw new Error('textKeyName can only contains a-z, A-Z, 0-9, _');
+      }
       valOptions.textKeyName = textKeyName.trim();
-    }
-    if (typeof textValueName !== 'string' || !textPattern.test(textValueName.trim())) {
-      throw new Error('textValueName can only contains a-z, A-Z, 0-9, _');
     } else {
+      valOptions.textKeyName = configs.DefaultKeyName;
+    }
+    if (textValueName) {
+      if (typeof textValueName !== 'string' || !textPattern.test(textValueName.trim())) {
+        throw new Error('textValueName can only contains a-z, A-Z, 0-9, _');
+      }
       valOptions.textValueName = textValueName.trim();
+    } else {
+      valOptions.textValueName = configs.DefaultValueName;
     }
 
     return {
@@ -345,6 +360,7 @@ class TextSearch {
       instance.#setup(initArgs);
 
       const { bucket } = valOptionsResult.data;
+      instance.#initBucketIfNotExist(bucket);
       await instance.addManyTextObjs(textObjs, {
         ...(bucket ? { bucket } : {})
       });

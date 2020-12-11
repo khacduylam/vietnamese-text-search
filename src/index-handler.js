@@ -243,7 +243,7 @@ export default {
       return { bucket, newKeywords: [], removedKeywords: [], nUpdated: 1, nAdded: 0 };
     }
 
-    if (removedKeywords.length) {
+    if (removedKeywords.length && oldTextObj) {
       this.removeIndexOfTextObj(textBucket, oldTextObj, {
         ...baseOptions,
         keywords: removedKeywords
@@ -266,8 +266,8 @@ export default {
       bucket,
       newKeywords,
       removedKeywords,
-      nUpdated: +!!removedKeywords.length,
-      nAdded: +!removedKeywords.length
+      nUpdated: +!!oldTextObj,
+      nAdded: +!oldTextObj
     };
   },
 
