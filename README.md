@@ -38,13 +38,13 @@ import TextSearch from 'vietnamese-text-search';
 
 (async () => {
   const options = {
-    thresholdScore: 0.5,   // Default: 0.5
-    limit: 30,             // Default: 30
-    sortOrder: -1,         // Default: -1
-    textKeyName: 'id',     // Default: 'textId'
-    textValueName: 'name'  // Default: 'text'
-    useAddedScore: false   // Default: false
-    autoGenBucket: true    // Default: true
+    thresholdScore: 0.5,    // Default: 0.5
+    limit: 30,              // Default: 30
+    sortOrder: -1,          // Default: -1
+    textKeyName: 'id',      // Default: 'textId'
+    textValueName: 'name',  // Default: 'text'
+    useAddedScore: false,   // Default: false
+    autoGenBucket: true     // Default: true
   };
   // Initialize textSearch instance with `ProductObjs` and `options`
   const textSearch = await TextSearch.init(ProductObjs, options);
